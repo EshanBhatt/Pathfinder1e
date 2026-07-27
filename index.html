@@ -1500,35 +1500,42 @@ function renderAbilities(){
   });
 }
 
+function babForEntry(c){
+  const L = Number(c.level)||0;
+  if(c.bab==='full') return L;
+  if(c.bab==='3/4') return Math.floor(L*0.75);
+  return Math.floor(L*0.5);
+}
 function renderClasses(){
   const box = document.getElementById('classRows');
   box.innerHTML = '';
   CHAR.classes.forEach((c,i)=>{
     const row = document.createElement('div');
     row.className = 'class-row';
+    const L = Number(c.level)||0;
     row.innerHTML = `
       <div class="field"><label>Class</label><input type="text" value="${escapeHtml(c.name)}" data-i="${i}" data-f="name"></div>
       <div class="field"><label>Level</label><input type="number" value="${c.level}" data-i="${i}" data-f="level"></div>
-      <div class="field"><label>BAB</label>
+      <div class="field"><label>BAB <span class="mono" id="cls-bab-${i}" style="color:var(--gold-bright);">${fmt(babForEntry(c))}</span></label>
         <select data-i="${i}" data-f="bab">
           <option value="full" ${c.bab==='full'?'selected':''}>Full</option>
           <option value="3/4" ${c.bab==='3/4'?'selected':''}>3/4</option>
           <option value="half" ${c.bab==='half'?'selected':''}>Half</option>
         </select>
       </div>
-      <div class="field"><label>Fort</label>
+      <div class="field"><label>Fort <span class="mono" id="cls-fort-${i}" style="color:var(--gold-bright);">${fmt(baseSave(c.fort,L))}</span></label>
         <select data-i="${i}" data-f="fort">
           <option value="good" ${c.fort==='good'?'selected':''}>Good</option>
           <option value="poor" ${c.fort==='poor'?'selected':''}>Poor</option>
         </select>
       </div>
-      <div class="field"><label>Ref</label>
+      <div class="field"><label>Ref <span class="mono" id="cls-ref-${i}" style="color:var(--gold-bright);">${fmt(baseSave(c.ref,L))}</span></label>
         <select data-i="${i}" data-f="ref">
           <option value="good" ${c.ref==='good'?'selected':''}>Good</option>
           <option value="poor" ${c.ref==='poor'?'selected':''}>Poor</option>
         </select>
       </div>
-      <div class="field"><label>Will</label>
+      <div class="field"><label>Will <span class="mono" id="cls-will-${i}" style="color:var(--gold-bright);">${fmt(baseSave(c.will,L))}</span></label>
         <select data-i="${i}" data-f="will">
           <option value="good" ${c.will==='good'?'selected':''}>Good</option>
           <option value="poor" ${c.will==='poor'?'selected':''}>Poor</option>
@@ -1876,6 +1883,15 @@ function recalcAll(){
   document.getElementById('ov-bab').textContent = fmt(bab);
   document.getElementById('ov-hd').textContent = lvl + 'd*';
   document.getElementById('ov-cr').textContent = CHAR.classes[0] ? (CHAR.classes[0].name||'—') : '—';
+
+  // per-class row number badges (BAB/Fort/Ref/Will) — update in place, never rebuild the row
+  CHAR.classes.forEach((c,i)=>{
+    const L = Number(c.level)||0;
+    const babEl = document.getElementById('cls-bab-'+i); if(babEl) babEl.textContent = fmt(babForEntry(c));
+    const fortEl = document.getElementById('cls-fort-'+i); if(fortEl) fortEl.textContent = fmt(baseSave(c.fort,L));
+    const refEl = document.getElementById('cls-ref-'+i); if(refEl) refEl.textContent = fmt(baseSave(c.ref,L));
+    const willEl = document.getElementById('cls-will-'+i); if(willEl) willEl.textContent = fmt(baseSave(c.will,L));
+  });
 
   const xpPct = CHAR.xp.next>0 ? Math.min(100, (CHAR.xp.current/CHAR.xp.next)*100) : 0;
   document.getElementById('xpFill').style.width = xpPct+'%';
