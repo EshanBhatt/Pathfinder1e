@@ -1003,7 +1003,7 @@ async function ghGetFile(path){
     return {content: decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))), sha: data.sha};
   }catch(e){ LAST_GH_ERROR = `GET ${path} → network/CORS error: ${e.message}`; return null; }
 }
-async function ghPutFile(path, contentStr, message){
+async function ghPutFile(path, contentStr, message, _retried){
   const cfg = getGhConfig(); if(!cfg) return false;
   const existing = await ghGetFile(path);
   const body = {message, content: btoa(unescape(encodeURIComponent(contentStr))), branch: cfg.branch||'main'};
@@ -1015,6 +1015,12 @@ async function ghPutFile(path, contentStr, message){
       let detail = '';
       try{ detail = (await res.json()).message || ''; }catch(e){}
       LAST_GH_ERROR = `PUT ${path} → ${res.status} ${detail}`;
+      // a 409 means the file changed since we fetched its sha (another
+      // device/tab wrote first) — re-fetch and retry once immediately
+      // rather than waiting out the full backoff.
+      if(res.status===409 && !_retried){
+        return await ghPutFile(path, contentStr, message, true);
+      }
       return false;
     }
     LAST_GH_ERROR = '';
@@ -1090,9 +1096,19 @@ async function loadChar(id){
 }
 
 let RETRY_TIMER = null;
+let SYNC_RUNNING = false;
+let SYNC_DIRTY = false;
 async function persistChar(attempt){
   attempt = attempt || 1;
   if(!CHAR_ID || !getGhConfig()) return;
+  if(SYNC_RUNNING){
+    // a save is already in flight for this character — never start a
+    // second overlapping write (that's what causes the GitHub 409 sha
+    // conflict). Just remember to run again once this one finishes.
+    SYNC_DIRTY = true;
+    return;
+  }
+  SYNC_RUNNING = true;
   CHAR.updatedAt = Date.now();
   const payload = JSON.stringify(CHAR);
   PENDING_SYNC = true;
@@ -1115,6 +1131,12 @@ async function persistChar(attempt){
     const delay = Math.min(30000, 2000 * Math.pow(2, attempt-1)); // backoff, capped at 30s
     clearTimeout(RETRY_TIMER);
     RETRY_TIMER = setTimeout(()=>persistChar(attempt+1), delay);
+  }
+  SYNC_RUNNING = false;
+  if(SYNC_DIRTY){
+    SYNC_DIRTY = false;
+    clearTimeout(RETRY_TIMER);
+    persistChar(1);
   }
 }
 function queueSave(){
