@@ -981,18 +981,16 @@ async function clearGhConfig(){
   try{ localStorage.removeItem(GH_CONFIG_KEY); }catch(e){}
 }
 function keyToGhPath(key){
-  if(key==='pf1e:index') return 'characters/index.json';
-  if(key.startsWith('pf1e:char:')) return 'characters/'+key.slice('pf1e:char:'.length)+'.json';
-  return 'characters/_misc/'+key.replace(/[^a-z0-9]/gi,'_')+'.json';
+  return null; // unused now — DATA_PATH is the single source of truth
 }
 let LAST_GH_ERROR = '';
 
-async function ghGetFile(path){
+async function ghFetchRaw(path){
   const cfg = getGhConfig(); if(!cfg) return null;
   try{
     const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}?ref=${cfg.branch||'main'}`,
       {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}});
-    if(res.status===404) return null;
+    if(res.status===404) return {missing:true};
     if(!res.ok){
       let detail = '';
       try{ detail = (await res.json()).message || ''; }catch(e){}
@@ -1003,11 +1001,10 @@ async function ghGetFile(path){
     return {content: decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))), sha: data.sha};
   }catch(e){ LAST_GH_ERROR = `GET ${path} → network/CORS error: ${e.message}`; return null; }
 }
-async function ghPutFile(path, contentStr, message, _retried){
-  const cfg = getGhConfig(); if(!cfg) return false;
-  const existing = await ghGetFile(path);
+async function ghPutRaw(path, contentStr, message, sha){
+  const cfg = getGhConfig(); if(!cfg) return null;
   const body = {message, content: btoa(unescape(encodeURIComponent(contentStr))), branch: cfg.branch||'main'};
-  if(existing) body.sha = existing.sha;
+  if(sha) body.sha = sha;
   try{
     const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`,
       {method:'PUT', headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json','Content-Type':'application/json'}, body: JSON.stringify(body)});
@@ -1015,28 +1012,12 @@ async function ghPutFile(path, contentStr, message, _retried){
       let detail = '';
       try{ detail = (await res.json()).message || ''; }catch(e){}
       LAST_GH_ERROR = `PUT ${path} → ${res.status} ${detail}`;
-      // a 409 means the file changed since we fetched its sha (another
-      // device/tab wrote first) — re-fetch and retry once immediately
-      // rather than waiting out the full backoff.
-      if(res.status===409 && !_retried){
-        return await ghPutFile(path, contentStr, message, true);
-      }
-      return false;
+      return null;
     }
     LAST_GH_ERROR = '';
-    return true;
-  }catch(e){ LAST_GH_ERROR = `PUT ${path} → network/CORS error: ${e.message}`; return false; }
-}
-async function ghDeleteFile(path, message){
-  const cfg = getGhConfig(); if(!cfg) return false;
-  const existing = await ghGetFile(path);
-  if(!existing) return true;
-  try{
-    const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`,
-      {method:'DELETE', headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json','Content-Type':'application/json'},
-       body: JSON.stringify({message, sha: existing.sha, branch: cfg.branch||'main'})});
-    return res.ok;
-  }catch(e){ return false; }
+    const data = await res.json();
+    return data.content.sha;
+  }catch(e){ LAST_GH_ERROR = `PUT ${path} → network/CORS error: ${e.message}`; return null; }
 }
 async function ghTestConnection(){
   const cfg = getGhConfig(); if(!cfg) return false;
@@ -1078,76 +1059,114 @@ window.addEventListener('beforeunload', (e)=>{
   }
 });
 
-async function listCharacters(){
-  if(!getGhConfig()) return [];
-  const f = await ghGetFile(keyToGhPath('pf1e:index'));
-  if(!f) return [];
-  try{ return JSON.parse(f.content); }catch(e){ return []; }
-}
-async function saveIndex(list){
-  if(!getGhConfig()) return false;
-  return await ghPutFile(keyToGhPath('pf1e:index'), JSON.stringify(list), 'Update character index');
-}
-async function loadChar(id){
-  if(!getGhConfig()) return null;
-  const f = await ghGetFile(keyToGhPath('pf1e:char:'+id));
-  if(!f) return null;
-  try{ return JSON.parse(f.content); }catch(e){ return null; }
+/* =========================================================================
+   DATA STORE — one flat file (characters/data.json) holding every
+   character, loaded once per session into memory (DB), with its GitHub
+   file version (DB_SHA) cached alongside it. Every save is a single PUT
+   using that cached sha — no per-character files, no separate index file,
+   no read-before-every-write. This mirrors the same pattern used in
+   ShotTracker, which is why that app never has sync trouble.
+   ========================================================================= */
+const DATA_PATH = 'characters/data.json';
+let DB = null;      // { chars: { [id]: characterObject } }
+let DB_SHA = null;
+let DB_LOADED = false;
+
+async function loadDB(){
+  const f = await ghFetchRaw(DATA_PATH);
+  if(!f) return false; // network/auth error — leave DB as-is (or unloaded)
+  if(f.missing){
+    DB = { chars: {} };
+    DB_SHA = null;
+    DB_LOADED = true;
+    // seed the file so it exists for next time
+    const sha = await ghPutRaw(DATA_PATH, JSON.stringify(DB), 'Initialize character data', null);
+    if(sha) DB_SHA = sha;
+    return true;
+  }
+  try{
+    DB = JSON.parse(f.content);
+    if(!DB.chars) DB.chars = {};
+  }catch(e){
+    DB = { chars: {} };
+  }
+  DB_SHA = f.sha;
+  DB_LOADED = true;
+  return true;
 }
 
-let RETRY_TIMER = null;
 let SYNC_RUNNING = false;
 let SYNC_DIRTY = false;
-async function persistChar(attempt){
+let RETRY_TIMER = null;
+
+async function pushDB(attempt){
   attempt = attempt || 1;
-  if(!CHAR_ID || !getGhConfig()) return;
-  if(SYNC_RUNNING){
-    // a save is already in flight for this character — never start a
-    // second overlapping write (that's what causes the GitHub 409 sha
-    // conflict). Just remember to run again once this one finishes.
-    SYNC_DIRTY = true;
-    return;
-  }
+  if(!getGhConfig() || !DB) return;
+  if(SYNC_RUNNING){ SYNC_DIRTY = true; return; }
   SYNC_RUNNING = true;
-  CHAR.updatedAt = Date.now();
-  const payload = JSON.stringify(CHAR);
   PENDING_SYNC = true;
   updateSyncPill('syncing');
 
-  const ghOk = await ghPutFile(keyToGhPath('pf1e:char:'+CHAR_ID), payload, `Update ${CHAR.info.name||'character'} via PF1e sheet`);
+  const newSha = await ghPutRaw(DATA_PATH, JSON.stringify(DB), 'Update character data via PF1e sheet', DB_SHA);
 
-  if(ghOk){
-    const list = await listCharacters();
-    const entry = list.find(c=>c.id===CHAR_ID);
-    if(entry){ entry.name = CHAR.info.name || CHAR.name || 'Unnamed'; entry.updated = Date.now(); }
-    else list.push({id:CHAR_ID, name: CHAR.info.name||'Unnamed', updated:Date.now()});
-    await saveIndex(list);
+  if(newSha){
+    DB_SHA = newSha;
     PENDING_SYNC = false;
     clearTimeout(RETRY_TIMER);
     updateSyncPill('synced');
+  } else if(LAST_GH_ERROR.includes('409')){
+    // our cached sha is stale (edited elsewhere) — re-fetch the whole
+    // file, re-apply our in-memory character on top, and retry immediately
+    console.warn('PF1e: 409 conflict, refetching and retrying:', LAST_GH_ERROR);
+    const f = await ghFetchRaw(DATA_PATH);
+    if(f && !f.missing){
+      try{
+        const remote = JSON.parse(f.content);
+        if(!remote.chars) remote.chars = {};
+        // merge: our own in-memory chars win for anything we're actively
+        // editing (this session's CHAR), everything else comes from remote
+        DB.chars = {...remote.chars, ...(CHAR_ID ? {[CHAR_ID]: CHAR} : {})};
+        DB_SHA = f.sha;
+      }catch(e){}
+    }
+    SYNC_RUNNING = false;
+    return pushDB(attempt); // immediate retry, not counted toward backoff
   } else {
     console.error('PF1e GitHub sync failed (attempt '+attempt+'):', LAST_GH_ERROR);
     updateSyncPill('failed', `Retrying sync… (${LAST_GH_ERROR || 'unknown error'})`);
-    const delay = Math.min(30000, 2000 * Math.pow(2, attempt-1)); // backoff, capped at 30s
+    const delay = Math.min(30000, 2000 * Math.pow(2, attempt-1));
     clearTimeout(RETRY_TIMER);
-    RETRY_TIMER = setTimeout(()=>persistChar(attempt+1), delay);
+    RETRY_TIMER = setTimeout(()=>pushDB(attempt+1), delay);
   }
   SYNC_RUNNING = false;
   if(SYNC_DIRTY){
     SYNC_DIRTY = false;
     clearTimeout(RETRY_TIMER);
-    persistChar(1);
+    pushDB(1);
   }
 }
+
+async function listCharacters(){
+  if(!DB_LOADED){ const ok = await loadDB(); if(!ok) return []; }
+  return Object.entries(DB.chars).map(([id,c])=>({
+    id, name: (c.info && c.info.name) || c.name || 'Unnamed', updated: c.updatedAt || 0
+  }));
+}
+async function loadChar(id){
+  if(!DB_LOADED){ const ok = await loadDB(); if(!ok) return null; }
+  return DB.chars[id] || null;
+}
 function queueSave(){
-  if(!getGhConfig()){
-    updateSyncPill('unconnected');
-    return;
-  }
+  if(!getGhConfig()){ updateSyncPill('unconnected'); return; }
   updateSyncPill('syncing');
   clearTimeout(saveTimer);
   clearTimeout(RETRY_TIMER);
-  saveTimer = setTimeout(()=>persistChar(1), 2500);
+  saveTimer = setTimeout(()=>{
+    if(!CHAR_ID || !DB) return;
+    CHAR.updatedAt = Date.now();
+    DB.chars[CHAR_ID] = CHAR;
+    pushDB(1);
+  }, 2500);
 }
 
 async function showPicker(){
@@ -1163,6 +1182,7 @@ async function showPicker(){
     box.innerHTML = '<div class="helptext">Connect GitHub Sync below to load or create characters — everything in this app lives in your repo, nothing is stored separately.</div>';
     return;
   }
+  box.innerHTML = '<div class="helptext">Loading…</div>';
   const list = await listCharacters();
   box.innerHTML = '';
   if(list.length===0){
@@ -1188,31 +1208,27 @@ async function openCharacter(id){
 
 async function createCharacter(name){
   if(!getGhConfig()){ toast('Connect GitHub Sync first'); return; }
+  if(!DB_LOADED){ const ok = await loadDB(); if(!ok){ toast('Could not reach GitHub: '+LAST_GH_ERROR); return; } }
   const id = 'c'+Date.now();
-  const list = await listCharacters();
-  list.push({id, name, updated:Date.now()});
-  await saveIndex(list);
   const ch = defaultChar(name);
   ch.info.name = name;
   ch.updatedAt = Date.now();
-  const ok = await ghPutFile(keyToGhPath('pf1e:char:'+id), JSON.stringify(ch), `Create character ${name}`);
-  if(!ok){ toast('Could not create character on GitHub: '+LAST_GH_ERROR); return; }
+  DB.chars[id] = ch;
+  await pushDB(1);
   openCharacter(id);
 }
 
 async function importCharacterFromFile(file){
   if(!getGhConfig()){ toast('Connect GitHub Sync first'); return; }
+  if(!DB_LOADED){ const ok = await loadDB(); if(!ok){ toast('Could not reach GitHub: '+LAST_GH_ERROR); return; } }
   try{
     const text = await file.text();
     const data = JSON.parse(text);
     if(!data || !data.info){ toast('That file doesn\'t look like a character export'); return; }
     data.updatedAt = Date.now();
     const id = 'c'+Date.now();
-    const list = await listCharacters();
-    list.push({id, name: data.info.name || data.name || 'Imported Character', updated:Date.now()});
-    await saveIndex(list);
-    const ok = await ghPutFile(keyToGhPath('pf1e:char:'+id), JSON.stringify(data), 'Import character');
-    if(!ok){ toast('Import failed on GitHub: '+LAST_GH_ERROR); return; }
+    DB.chars[id] = data;
+    await pushDB(1);
     openCharacter(id);
     toast('Character imported');
   }catch(e){
@@ -1240,10 +1256,8 @@ document.getElementById('switchCharBtn').onclick = showPicker;
 document.getElementById('deleteCharBtn').onclick = async ()=>{
   if(!getGhConfig()){ toast('Connect GitHub Sync first'); return; }
   if(!confirm('Delete this character permanently? This cannot be undone.')) return;
-  const list = await listCharacters();
-  const filtered = list.filter(c=>c.id!==CHAR_ID);
-  await saveIndex(filtered);
-  await ghDeleteFile(keyToGhPath('pf1e:char:'+CHAR_ID), `Delete ${CHAR.info.name||'character'}`);
+  delete DB.chars[CHAR_ID];
+  await pushDB(1);
   showPicker();
 };
 document.getElementById('exportCharBtn').onclick = exportCurrentCharacter;
@@ -1288,6 +1302,7 @@ document.getElementById('ghConnectBtn').onclick = async ()=>{
     clearGhConfig();
     return;
   }
+  DB = null; DB_SHA = null; DB_LOADED = false; // fresh load from this repo
   toast('Connected — syncing your characters to GitHub');
   refreshGhStatusText();
   updateSyncPill('synced', `syncing to ${owner}/${repo}`);
@@ -1300,6 +1315,7 @@ document.getElementById('ghConnectBtn').onclick = async ()=>{
 };
 document.getElementById('ghDisconnectBtn').onclick = async ()=>{
   await clearGhConfig();
+  DB = null; DB_SHA = null; DB_LOADED = false;
   refreshGhStatusText();
   updateSyncPill('unconnected');
   toast('Disconnected — nothing will save until you reconnect');
