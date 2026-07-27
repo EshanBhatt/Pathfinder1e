@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Character Record — Pathfinder 1e</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#12151c;
+  --surface:#1b2029;
+  --surface2:#232a37;
+  --surface3:#2b3342;
+  --border:#333c4d;
+  --border-soft:#262d3a;
+  --gold:#c6a15b;
+  --gold-bright:#e3c079;
+  --sage:#7a9a7e;
+  --sage-dim:#4f6653;
+  --text:#ede8da;
+  --text-dim:#9aa0ae;
+  --text-faint:#5f6673;
+  --danger:#b5544b;
+  --danger-bright:#d97a70;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(1200px 600px at 15% -10%, #1a2130 0%, transparent 60%),
+    radial-gradient(1000px 500px at 100% 0%, #1a1f28 0%, transparent 55%),
+    var(--ink);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  padding:28px 20px 80px;
+}
+.mono{font-family:'JetBrains Mono',monospace;}
+h1,h2,h3,.display{font-family:'Cinzel',serif;letter-spacing:.02em;}
+
+/* ===== Shell / header ===== */
+.wrap{max-width:1180px;margin:0 auto;}
+.masthead{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:20px;
+  padding-bottom:18px;margin-bottom:22px;border-bottom:1px solid var(--border);
+  position:relative;
+}
+.masthead::before{
+  content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg, var(--gold) 0%, transparent 35%);
+}
+.brand{display:flex;align-items:center;gap:14px;}
+.seal{
+  width:46px;height:46px;border-radius:50%;
+  background:radial-gradient(circle at 32% 28%, #3a3120, var(--surface2) 70%);
+  border:1.5px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;color:var(--gold-bright);font-weight:700;font-size:18px;
+  flex:0 0 auto;
+}
+.brand h1{margin:0;font-size:22px;color:var(--text);font-weight:600;}
+.brand .sub{color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:.14em;margin-top:2px;}
+.headline-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+
+button, select, input, textarea{font-family:inherit;color:inherit;}
+.btn{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:9px 15px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500;
+  transition:border-color .15s, background .15s;
+}
+.btn:hover{border-color:var(--gold);background:var(--surface3);}
+.btn.primary{background:linear-gradient(180deg,#d3ae6a,var(--gold));color:#211a0d;border-color:var(--gold);font-weight:700;}
+.btn.primary:hover{background:linear-gradient(180deg,var(--gold-bright),#d3ae6a);}
+.btn.danger{border-color:#5c3430;}
+.btn.danger:hover{background:#2a1c1b;border-color:var(--danger);}
+.btn.small{padding:6px 10px;font-size:12px;}
+.btn:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, .tab:focus-visible{
+  outline:2px solid var(--gold-bright);outline-offset:1px;
+}
+
+/* ===== Tabs ===== */
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap;}
+.tab{
+  background:none;border:none;color:var(--text-dim);padding:10px 16px;font-size:13px;font-weight:600;
+  cursor:pointer;border-bottom:2px solid transparent;letter-spacing:.03em;text-transform:uppercase;font-size:12px;
+}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--gold-bright);border-bottom-color:var(--gold);}
+.panel{display:none;}
+.panel.active{display:block;animation:fade .18s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
+
+/* ===== Cards / grid ===== */
+.grid{display:grid;gap:16px;}
+.g2{grid-template-columns:1fr 1fr;}
+.g3{grid-template-columns:repeat(3,1fr);}
+.g4{grid-template-columns:repeat(4,1fr);}
+.g6{grid-template-columns:repeat(6,1fr);}
+@media(max-width:860px){.g2,.g3,.g4,.g6{grid-template-columns:1fr 1fr;}}
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px 18px;
+}
+.card h3{margin:0 0 12px;font-size:13px;color:var(--gold-bright);text-transform:uppercase;letter-spacing:.1em;font-weight:600;display:flex;align-items:center;justify-content:space-between;}
+.card h3 .hint{font-family:'Inter';text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-faint);font-weight:400;}
+
+label{display:block;font-size:10.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+input[type=text],input[type=number],select,textarea{
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  padding:8px 9px;font-size:13.5px;color:var(--text);
+}
+input[type=number]{font-family:'JetBrains Mono',monospace;}
+textarea{resize:vertical;min-height:60px;line-height:1.5;}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);outline:none;}
+.field{margin-bottom:10px;}
+.row{display:flex;gap:10px;}
+.row > *{flex:1;min-width:0;}
+
+/* ===== Ability blocks ===== */
+.ability-box{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:10px;text-align:center;position:relative;
+}
+.ability-box .name{font-family:'Cinzel';font-size:11px;color:var(--sage);letter-spacing:.1em;}
+.ability-box .mod{font-family:'JetBrains Mono';font-size:30px;font-weight:700;color:var(--gold-bright);line-height:1.1;margin:4px 0;}
+.ability-box .score{font-family:'JetBrains Mono';font-size:12px;color:var(--text-dim);}
+.ability-box .breakdown{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px;}
+.ability-box .breakdown input{padding:4px;font-size:11px;text-align:center;}
+.ability-box .breakdown .lbl{font-size:9px;color:var(--text-faint);grid-column:span 2;text-align:left;margin-top:2px;}
+
+/* ===== stat readouts ===== */
+.stat{
+  background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;text-align:center;
+}
+.stat .v{font-family:'JetBrains Mono';font-weight:700;font-size:20px;color:var(--gold-bright);}
+.stat .l{font-size:9.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+.stat.big .v{font-size:28px;}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{
+  text-align:left;color:var(--text-dim);font-weight:600;font-size:10px;text-transform:uppercase;
+  letter-spacing:.06em;padding:6px 6px;border-bottom:1px solid var(--border);
+}
+td{padding:5px 6px;border-bottom:1px solid var(--border-soft);vertical-align:middle;}
+tr:hover td{background:rgba(198,161,91,.04);}
+td input[type=number], td input[type=text]{padding:4px 6px;font-size:12px;}
+td.num{text-align:center;width:52px;}
+.mini-total{font-family:'JetBrains Mono';font-weight:700;color:var(--gold-bright);text-align:center;}
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;border:1px solid var(--sage-dim);color:var(--sage);}
+.iconbtn{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:15px;padding:2px 6px;}
+.iconbtn:hover{color:var(--danger-bright);}
+.checkwrap{display:flex;justify-content:center;}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:pointer;}
+
+.divider{height:1px;background:var(--border-soft);margin:16px 0;}
+.section-title{font-family:'Cinzel';font-size:13px;color:var(--gold-bright);letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;}
+.helptext{font-size:11px;color:var(--text-faint);margin-top:6px;line-height:1.5;}
+.pill-toggle{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;}
+.pill-toggle button{flex:1;background:var(--surface2);border:none;color:var(--text-dim);padding:7px 4px;font-size:11px;cursor:pointer;}
+.pill-toggle button.on{background:var(--gold);color:#211a0d;font-weight:700;}
+
+/* search / reference */
+.search-input{position:relative;}
+.results{max-height:340px;overflow:auto;border:1px solid var(--border-soft);border-radius:8px;margin-top:10px;}
+.result-item{padding:10px 12px;border-bottom:1px solid var(--border-soft);cursor:pointer;}
+.result-item:hover{background:var(--surface2);}
+.result-item .rname{font-weight:600;color:var(--gold-bright);font-size:13px;}
+.result-item .rmeta{font-size:10.5px;color:var(--text-faint);margin-top:1px;}
+.result-item .rdesc{font-size:12px;color:var(--text-dim);margin-top:5px;line-height:1.5;display:none;}
+.result-item.open .rdesc{display:block;}
+
+.class-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px;}
+@media(max-width:860px){.class-row{grid-template-columns:1fr 1fr;}}
+
+.load-bar{height:8px;border-radius:6px;background:var(--surface3);overflow:hidden;margin-top:6px;}
+.load-bar .fill{height:100%;background:linear-gradient(90deg,var(--sage),var(--gold));}
+
+/* character picker */
+.picker-overlay{
+  position:fixed;inset:0;background:rgba(10,12,16,.86);display:flex;align-items:center;justify-content:center;
+  z-index:50;padding:20px;
+}
+.picker{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px;max-width:520px;width:100%;}
+.picker h2{margin:0 0 4px;font-size:19px;}
+.picker p{color:var(--text-dim);font-size:12.5px;margin:0 0 18px;}
+.char-list{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow:auto;margin-bottom:16px;}
+.char-item{
+  display:flex;justify-content:space-between;align-items:center;padding:10px 12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;
+}
+.char-item:hover{border-color:var(--gold);}
+.char-item .cn{font-weight:600;}
+.char-item .cm{font-size:11px;color:var(--text-faint);}
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface3);
+  border:1px solid var(--gold);color:var(--text);padding:9px 18px;border-radius:8px;font-size:12.5px;
+  opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;z-index:60;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<div class="picker-overlay" id="pickerOverlay">
+  <div class="picker">
+    <h2 class="display">Character Record</h2>
+    <p>Select a saved character, or create a new record. Everything auto-saves as you play.</p>
+    <div class="char-list" id="charList"></div>
+    <div class="row">
+      <input type="text" id="newCharName" placeholder="New character name…">
+      <button class="btn primary" id="newCharBtn" style="flex:0 0 auto;">Create</button>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <button class="btn small" id="importCharBtnPicker" style="flex:0 0 auto;">Import from JSON file…</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="app" style="display:none;">
+  <div class="masthead">
+    <div class="brand">
+      <div class="seal" id="sealLetter">—</div>
+      <div>
+        <h1 id="headerName">Unnamed</h1>
+        <div class="sub" id="headerSub">Level — · Pathfinder 1st Edition</div>
+      </div>
+    </div>
+    <div class="headline-actions">
+      <button class="btn small" id="switchCharBtn">Switch Character</button>
+      <button class="btn small" id="exportCharBtn">Export JSON</button>
+      <button class="btn small" id="importCharBtn">Import JSON</button>
+      <input type="file" id="importFileInput" accept="application/json" style="display:none;">
+      <button class="btn small danger" id="deleteCharBtn">Delete</button>
+      <span class="helptext" id="saveStatus" style="margin:0;">Saved</span>
+      <span class="helptext" id="storageMode" style="margin:0;"></span>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="combat">Combat</button>
+    <button class="tab" data-tab="skills">Skills</button>
+    <button class="tab" data-tab="feats">Feats &amp; Features</button>
+    <button class="tab" data-tab="spells">Spells</button>
+    <button class="tab" data-tab="gear">Gear &amp; Wealth</button>
+    <button class="tab" data-tab="reference">Reference</button>
+  </div>
+
+  <!-- ============ OVERVIEW ============ -->
+  <div class="panel active" id="panel-overview">
+    <div class="grid g2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>Identity</h3>
+        <div class="row">
+          <div class="field"><label>Character Name</label><input type="text" data-bind="info.name"></div>
+          <div class="field"><label>Player</label><input type="text" data-bind="info.player"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Race</label><input type="text" data-bind="info.race"></div>
+          <div class="field"><label>Size</label>
+            <select data-bind="info.size">
+              <option value="fine">Fine</option><option value="diminutive">Diminutive</option>
+              <option value="tiny">Tiny</option><option value="small">Small</option>
+              <option value="medium">Medium</option><option value="large">Large</option>
+              <option value="huge">Huge</option><option value="gargantuan">Gargantuan</option>
+              <option value="colossal">Colossal</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Gender</label><input type="text" data-bind="info.gender"></div>
+          <div class="field"><label>Age</label><input type="text" data-bind="info.age"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Height</label><input type="text" data-bind="info.height"></div>
+          <div class="field"><label>Weight</label><input type="text" data-bind="info.weight"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Hair</label><input type="text" data-bind="info.hair"></div>
+          <div class="field"><label>Eyes</label><input type="text" data-bind="info.eyes"></div>
+        </div>
+        <div class="field"><label>Alignment</label><input type="text" data-bind="info.alignment" placeholder="e.g. True Neutral"></div>
+        <div class="field"><label>Deity</label><input type="text" data-bind="info.deity"></div>
+        <div class="field"><label>Homeland &amp; Background</label><textarea data-bind="info.background" style="min-height:44px;"></textarea></div>
+        <div class="field"><label>Languages</label><input type="text" data-bind="info.languages"></div>
+      </div>
+
+      <div class="card">
+        <h3>Classes &amp; Levels <span class="hint">drives BAB, saves &amp; casting</span></h3>
+        <div id="classRows"></div>
+        <button class="btn small" id="addClassBtn">+ Add Class</button>
+        <div class="divider"></div>
+        <div class="grid g4">
+          <div class="stat"><div class="v" id="ov-level">0</div><div class="l">Total Level</div></div>
+          <div class="stat"><div class="v" id="ov-bab">+0</div><div class="l">Base Attack</div></div>
+          <div class="stat"><div class="v" id="ov-hd">0</div><div class="l">Hit Dice</div></div>
+          <div class="stat"><div class="v" id="ov-cr">—</div><div class="l">Favored Class</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Ability Scores <span class="hint">enter base score — modifiers ripple through the whole sheet</span></h3>
+      <div class="grid g6" id="abilityGrid"></div>
+    </div>
+
+    <div class="grid g3">
+      <div class="card">
+        <h3>Hit Points</h3>
+        <div class="row">
+          <div class="field"><label>Max HP</label><input type="number" data-bind="hp.max"></div>
+          <div class="field"><label>Current HP</label><input type="number" data-bind="hp.current"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Nonlethal</label><input type="number" data-bind="hp.nonlethal"></div>
+          <div class="field"><label>Temp HP</label><input type="number" data-bind="hp.temp"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Speed</h3>
+        <div class="row">
+          <div class="field"><label>Land (ft)</label><input type="number" data-bind="speed.land"></div>
+          <div class="field"><label>Fly (ft)</label><input type="number" data-bind="speed.fly"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Swim (ft)</label><input type="number" data-bind="speed.swim"></div>
+          <div class="field"><label>Climb (ft)</label><input type="number" data-bind="speed.climb"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Experience</h3>
+        <div class="field"><label>Current XP</label><input type="number" data-bind="xp.current"></div>
+        <div class="field"><label>XP to Next Level</label><input type="number" data-bind="xp.next"></div>
+        <div class="load-bar"><div class="fill" id="xpFill" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COMBAT ============ -->
+  <div class="panel" id="panel-combat">
+    <div class="grid g4" style="margin-bottom:16px;">
+      <div class="stat big"><div class="v" id="c-ac">10</div><div class="l">Armor Class</div></div>
+      <div class="stat big"><div class="v" id="c-touch">10</div><div class="l">Touch</div></div>
+      <div class="stat big"><div class="v" id="c-ff">10</div><div class="l">Flat-Footed</div></div>
+      <div class="stat big"><div class="v" id="c-init">+0</div><div class="l">Initiative</div></div>
+    </div>
+    <div class="grid g2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>Armor Class Components</h3>
+        <div class="grid g4">
+          <div class="field"><label>Armor Bonus</label><input type="number" data-bind="ac.armor"></div>
+          <div class="field"><label>Shield Bonus</label><input type="number" data-bind="ac.shield"></div>
+          <div class="field"><label>Natural Armor</label><input type="number" data-bind="ac.natural"></div>
+          <div class="field"><label>Deflection</label><input type="number" data-bind="ac.deflect"></div>
+          <div class="field"><label>Dodge / Misc</label><input type="number" data-bind="ac.dodge"></div>
+          <div class="field"><label>Temp AC</label><input type="number" data-bind="ac.temp"></div>
+          <div class="field"><label>Max Dex Bonus</label><input type="number" data-bind="ac.maxDex" placeholder="99 = none"></div>
+          <div class="field"><label>Armor Check Penalty</label><input type="number" data-bind="ac.acp"></div>
+        </div>
+        <div class="helptext">Size modifier to AC is applied automatically from your chosen Size (currently <span id="acSizeReadout">+0</span>). Dex mod is capped by Max Dex Bonus (e.g. from armor).</div>
+      </div>
+      <div class="card">
+        <h3>Saving Throws</h3>
+        <table>
+          <thead><tr><th>Save</th><th class="num">Base</th><th class="num">Abil.</th><th class="num">Magic</th><th class="num">Misc</th><th class="num">Temp</th><th class="num">Total</th></tr></thead>
+          <tbody id="savesBody"></tbody>
+        </table>
+        <div class="helptext">Base is auto-summed from your class list (good/poor progressions). Ability mod pulls automatically (Fort→Con, Ref→Dex, Will→Wis).</div>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>Combat Maneuvers</h3>
+        <div class="grid g2">
+          <div class="stat"><div class="v" id="c-cmb">+0</div><div class="l">CMB</div></div>
+          <div class="stat"><div class="v" id="c-cmd">10</div><div class="l">CMD</div></div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div class="field"><label>CMB Misc</label><input type="number" data-bind="combat.cmbMisc"></div>
+          <div class="field"><label>CMD Misc</label><input type="number" data-bind="combat.cmdMisc"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Initiative</h3>
+        <div class="row">
+          <div class="field"><label>Misc Init Bonus</label><input type="number" data-bind="combat.initMisc"></div>
+        </div>
+        <div class="helptext">Initiative = Dex modifier + misc bonus (feats like Improved Initiative, traits, etc).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Attacks &amp; Weapons</h3>
+      <table>
+        <thead><tr><th style="min-width:150px;">Weapon</th><th class="num">Atk Mod</th><th class="num">Attack Bonus</th><th style="min-width:110px;">Damage</th><th class="num">Crit</th><th style="min-width:70px;">Range</th><th style="min-width:70px;">Type</th><th></th></tr></thead>
+        <tbody id="weaponsBody"></tbody>
+      </table>
+      <button class="btn small" id="addWeaponBtn" style="margin-top:8px;">+ Add Weapon/Attack</button>
+      <div class="helptext">Attack Bonus auto-computes as BAB + Str (melee) or Dex (ranged, toggle per row) + size mod + your entered Atk Mod.</div>
+    </div>
+  </div>
+
+  <!-- ============ SKILLS ============ -->
+  <div class="panel" id="panel-skills">
+    <div class="card">
+      <h3>Skills <span class="hint" id="skillPointsReadout"></span></h3>
+      <table>
+        <thead><tr>
+          <th style="width:26px;">Class</th><th>Skill</th><th class="num">Ability</th>
+          <th class="num">Ranks</th><th class="num">Trained</th><th class="num">Misc</th><th class="num">Total</th>
+        </tr></thead>
+        <tbody id="skillsBody"></tbody>
+      </table>
+      <div class="helptext">Total = ability modifier + ranks + (3 class-skill bonus if ranks &gt; 0) + misc − armor check penalty (for affected skills, marked with a dagger). Check the box in "Class" for class skills.</div>
+    </div>
+  </div>
+
+  <!-- ============ FEATS & FEATURES ============ -->
+  <div class="panel" id="panel-feats">
+    <div class="grid g2">
+      <div class="card">
+        <h3>Feats</h3>
+        <div id="featsList"></div>
+        <button class="btn small" id="addFeatBtn">+ Add Feat</button>
+        <div class="helptext">Search the Reference tab for real Core Rulebook feat text you can copy in, or write your own.</div>
+      </div>
+      <div class="card">
+        <h3>Traits</h3>
+        <div id="traitsList"></div>
+        <button class="btn small" id="addTraitBtn">+ Add Trait</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Racial Traits &amp; Class Features</h3>
+      <textarea data-bind="notes.features" style="min-height:160px;" placeholder="Racial traits, class features, special abilities…"></textarea>
+    </div>
+  </div>
+
+  <!-- ============ SPELLS ============ -->
+  <div class="panel" id="panel-spells">
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Spellcasting Classes</h3>
+      <div id="casterRows"></div>
+      <button class="btn small" id="addCasterBtn">+ Add Spellcasting Class</button>
+      <div class="helptext">Caster level, casting ability, and progression type (Full 9-level / Medium 6-level / Low 4-level) determine spells-per-day automatically, including bonus spells from a high ability score.</div>
+    </div>
+    <div id="spellSlotTables"></div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Prepared / Known Spells</h3>
+      <table>
+        <thead><tr><th class="num">Lvl</th><th>Name</th><th style="min-width:70px;">School</th><th class="num">Prep</th><th class="num">Cast</th><th></th></tr></thead>
+        <tbody id="spellsPreparedBody"></tbody>
+      </table>
+      <button class="btn small" id="addSpellRowBtn">+ Add Spell</button>
+      <div class="helptext">Use the Reference tab to look up a spell, then click "Add to sheet" to drop it straight into this list.</div>
+    </div>
+  </div>
+
+  <!-- ============ GEAR ============ -->
+  <div class="panel" id="panel-gear">
+    <div class="grid g3" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>Currency</h3>
+        <div class="grid g2">
+          <div class="field"><label>Platinum</label><input type="number" data-bind="currency.pp"></div>
+          <div class="field"><label>Gold</label><input type="number" data-bind="currency.gp"></div>
+          <div class="field"><label>Silver</label><input type="number" data-bind="currency.sp"></div>
+          <div class="field"><label>Copper</label><input type="number" data-bind="currency.cp"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="stat"><div class="v" id="gp-total">0 gp</div><div class="l">Total Value</div></div>
+      </div>
+      <div class="card" style="grid-column:span 2;">
+        <h3>Encumbrance</h3>
+        <div class="grid g4">
+          <div class="stat"><div class="v" id="load-light">0</div><div class="l">Light Max</div></div>
+          <div class="stat"><div class="v" id="load-med">0</div><div class="l">Medium Max</div></div>
+          <div class="stat"><div class="v" id="load-heavy">0</div><div class="l">Heavy Max</div></div>
+          <div class="stat"><div class="v" id="load-current">0</div><div class="l">Carried (lb)</div></div>
+        </div>
+        <div class="load-bar"><div class="fill" id="loadFill" style="width:0%"></div></div>
+        <div class="helptext" id="loadStatus">Light load. Max load scales automatically with Strength score and Size.</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Equipment</h3>
+      <table>
+        <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Wt (ea)</th><th class="num">Total Wt</th><th style="min-width:120px;">Notes</th><th></th></tr></thead>
+        <tbody id="gearBody"></tbody>
+      </table>
+      <button class="btn small" id="addGearBtn">+ Add Item</button>
+    </div>
+  </div>
+
+  <!-- ============ REFERENCE ============ -->
+  <div class="panel" id="panel-reference">
+    <div class="card">
+      <h3>Core Rulebook Reference <span class="hint">bundled dataset — feats, spells &amp; skills</span></h3>
+      <div class="row" style="align-items:center;">
+        <select id="refType" style="max-width:160px;">
+          <option value="spells">Spells</option>
+          <option value="feats">Feats</option>
+          <option value="skills">Skills</option>
+        </select>
+        <input type="text" id="refSearch" placeholder="Search by name, school, or type…">
+      </div>
+      <div class="results" id="refResults"></div>
+      <div class="helptext">This is a curated Core Rulebook-focused dataset, written for quick reference at the table — not a full reproduction of every splatbook. Ask me to expand any list (e.g. Advanced Player's Guide spells) any time.</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   DATA — Core rules tables + curated reference content
+   ========================================================================= */
+const ABILS = ['str','dex','con','int','wis','cha'];
+const ABIL_LABEL = {str:'STR',dex:'DEX',con:'CON',int:'INT',wis:'WIS',cha:'CHA'};
+
+const SIZES = {
+  fine:      {ac:8,  stealth:16, fly:8,  carry:0.125},
+  diminutive:{ac:4,  stealth:12, fly:6,  carry:0.25},
+  tiny:      {ac:2,  stealth:8,  fly:4,  carry:0.5},
+  small:     {ac:1,  stealth:4,  fly:2,  carry:0.75},
+  medium:    {ac:0,  stealth:0,  fly:0,  carry:1},
+  large:     {ac:-1, stealth:-4, fly:-2, carry:2},
+  huge:      {ac:-2, stealth:-8, fly:-4, carry:4},
+  gargantuan:{ac:-4, stealth:-12,fly:-6, carry:8},
+  colossal:  {ac:-8, stealth:-16,fly:-8, carry:16}
+};
+
+// PF1e core skill list: [name, ability, armorCheckPenalty, trainedOnly]
+const SKILLS = [
+  ['Acrobatics','dex',true,false],
+  ['Appraise','int',false,false],
+  ['Bluff','cha',false,false],
+  ['Climb','str',true,false],
+  ['Craft','int',false,false],
+  ['Diplomacy','cha',false,false],
+  ['Disable Device','dex',true,true],
+  ['Disguise','cha',false,false],
+  ['Escape Artist','dex',true,false],
+  ['Fly','dex',true,false],
+  ['Handle Animal','cha',false,true],
+  ['Heal','wis',false,false],
+  ['Intimidate','cha',false,false],
+  ['Knowledge (arcana)','int',false,true],
+  ['Knowledge (dungeoneering)','int',false,true],
+  ['Knowledge (engineering)','int',false,true],
+  ['Knowledge (geography)','int',false,true],
+  ['Knowledge (history)','int',false,true],
+  ['Knowledge (local)','int',false,true],
+  ['Knowledge (nature)','int',false,true],
+  ['Knowledge (nobility)','int',false,true],
+  ['Knowledge (planes)','int',false,true],
+  ['Knowledge (religion)','int',false,true],
+  ['Linguistics','int',false,true],
+  ['Perception','wis',false,false],
+  ['Perform','cha',false,true],
+  ['Profession','wis',false,true],
+  ['Ride','dex',true,false],
+  ['Sense Motive','wis',false,false],
+  ['Sleight of Hand','dex',true,true],
+  ['Spellcraft','int',false,true],
+  ['Stealth','dex',true,false],
+  ['Survival','wis',false,false],
+  ['Swim','str',true,false],
+  ['Use Magic Device','cha',false,true],
+];
+
+const SKILL_REF = {
+  'Acrobatics':'Balance, tumble through threatened squares, and reduce fall damage. Untrained use is possible but risky on narrow surfaces.',
+  'Appraise':'Estimate the value of an item at a glance. A trained check can also detect masterwork quality or forgery clues.',
+  'Bluff':'Convince someone of an untruth, feint in combat to deny a foe\'s Dex bonus, or deliver a secret message.',
+  'Climb':'Ascend or descend a slope, wall, or rope. Failure by 5+ means a fall; each hour of climbing costs extra effort.',
+  'Craft':'Create and repair objects of a chosen type; also lets you appraise or ascertain the quality of items of that type.',
+  'Diplomacy':'Change a creature\'s attitude toward you, negotiate, or gather information by asking around town.',
+  'Disable Device':'Disarm traps and pick locks. Trained only. A failure by 5+ while disarming a trap can spring it.',
+  'Disguise':'Change your appearance. Opposed by observers\' Perception; suspicious circumstances grant a bonus to see through it.',
+  'Escape Artist':'Slip bonds, squeeze through tight spaces, or escape a grapple or pin as a full-round action.',
+  'Fly':'Maneuver while airborne — control direction, hover, and avoid crashing. Penalized by armor and Fly speed maneuverability.',
+  'Handle Animal':'Train, push, or direct an animal. Trained only; without ranks you can still "push" a friendly trained animal.',
+  'Heal':'Provide first aid to stabilize the dying, treat wounds, poison, disease, or long-term care between rests.',
+  'Intimidate':'Force a shift in attitude through threats, or demoralize a foe in combat to make it shaken for 1 round.',
+  'Knowledge':'Recall lore for a specific field (10 separate skills). Trained only — untrained checks only succeed on very easy DCs.',
+  'Linguistics':'Decipher unknown scripts, forge documents, and learn new languages. Trained only.',
+  'Perception':'Notice hidden creatures, traps, and details. The most commonly rolled skill at the table.',
+  'Perform':'Entertain an audience in a chosen medium. Trained only; required for bardic performance in many cases.',
+  'Profession':'Earn a living and demonstrate expertise in a trade. Trained only; can be used to earn income between adventures.',
+  'Ride':'Control a mount in combat and difficult situations, including fast mounting and guiding with knees.',
+  'Sense Motive':'Detect lies, read intentions, and notice when someone is being magically influenced against their will.',
+  'Sleight of Hand':'Palm an object, plant something on someone, or pick a pocket. Trained only; always at least a -20 in armor with ACP unless proficient.',
+  'Spellcraft':'Identify spells as they\'re cast, decipher scrolls, and craft magic items. Trained only.',
+  'Stealth':'Hide from view and move quietly. Size grants a bonus (smaller) or penalty (larger) as noted on your sheet.',
+  'Survival':'Track creatures, forage, avoid getting lost, and predict weather.',
+  'Swim':'Move through water; a full-round action check each round of difficult swimming, with fatigue on repeated failure.',
+  'Use Magic Device':'Trained only. Use magic items you couldn\'t otherwise, emulating a race, class, alignment, or spell ability score.'
+};
+
+// Feats — curated Core Rulebook set (mechanical text, paraphrased)
+const FEATS = [
+  {name:'Power Attack', type:'Combat', prereq:'Str 13, base attack bonus +1', desc:'Take a penalty on melee attack rolls to add extra damage, scaling with base attack bonus. The penalty and bonus double for two-handed weapons.'},
+  {name:'Combat Expertise', type:'Combat', prereq:'Int 13', desc:'Trade attack bonus for a matching dodge bonus to AC on your turn, scaling with base attack bonus.'},
+  {name:'Dodge', type:'Combat', prereq:'—', desc:'Gain a +1 dodge bonus to AC.'},
+  {name:'Mobility', type:'Combat', prereq:'Dodge', desc:'+4 dodge bonus to AC against attacks of opportunity provoked by movement.'},
+  {name:'Spring Attack', type:'Combat', prereq:'Dodge, Mobility, base attack bonus +4', desc:'Move, make a single melee attack, then continue moving without provoking an attack of opportunity from the target.'},
+  {name:'Toughness', type:'General', prereq:'—', desc:'Gain +3 hit points, plus +1 more per Hit Die beyond 3.'},
+  {name:'Improved Initiative', type:'Combat', prereq:'—', desc:'+4 bonus on initiative checks.'},
+  {name:'Weapon Finesse', type:'Combat', prereq:'—', desc:'Use your Dex modifier instead of Str on attack rolls with light weapons (and certain finesse-capable weapons).'},
+  {name:'Point-Blank Shot', type:'Combat', prereq:'—', desc:'+1 on attack and damage rolls with ranged weapons within 30 feet.'},
+  {name:'Precise Shot', type:'Combat', prereq:'Point-Blank Shot', desc:'No penalty on ranged attacks made into melee.'},
+  {name:'Rapid Shot', type:'Combat', prereq:'Dex 13, Point-Blank Shot', desc:'Make one extra ranged attack each round at your highest bonus, all attacks taking a -2 penalty.'},
+  {name:'Two-Weapon Fighting', type:'Combat', prereq:'Dex 15', desc:'Reduces the standard two-weapon fighting penalties by 2 on both weapons.'},
+  {name:'Improved Two-Weapon Fighting', type:'Combat', prereq:'Dex 17, Two-Weapon Fighting, base attack bonus +6', desc:'Gain a second off-hand attack at a -5 penalty.'},
+  {name:'Cleave', type:'Combat', prereq:'Str 13, Power Attack', desc:'If you drop a foe with a melee attack, make one free attack against another adjacent foe at the same bonus.'},
+  {name:'Great Cleave', type:'Combat', prereq:'Str 13, Cleave, Power Attack, base attack bonus +4', desc:'As Cleave, with no limit to the number of extra attacks per round.'},
+  {name:'Weapon Focus', type:'Combat', prereq:'Proficiency with the weapon', desc:'+1 bonus on attack rolls with the chosen weapon.'},
+  {name:'Weapon Specialization', type:'Combat', prereq:'Weapon Focus, fighter level 4th', desc:'+2 bonus on damage rolls with the chosen weapon.'},
+  {name:'Improved Critical', type:'Combat', prereq:'Proficiency, base attack bonus +8', desc:'Doubles the threat range of the chosen weapon.'},
+  {name:'Vital Strike', type:'Combat', prereq:'Base attack bonus +6', desc:'When making a single attack, roll the weapon\'s damage dice an extra time and add it to the total.'},
+  {name:'Combat Reflexes', type:'Combat', prereq:'—', desc:'Make additional attacks of opportunity equal to your Dex bonus, and can make them even while flat-footed.'},
+  {name:'Deadly Aim', type:'Combat', prereq:'Dex 13, base attack bonus +1', desc:'Take a penalty on ranged attack rolls to add extra damage, scaling with base attack bonus.'},
+  {name:'Iron Will', type:'General', prereq:'—', desc:'+2 bonus on Will saves.'},
+  {name:'Great Fortitude', type:'General', prereq:'—', desc:'+2 bonus on Fortitude saves.'},
+  {name:'Lightning Reflexes', type:'General', prereq:'—', desc:'+2 bonus on Reflex saves.'},
+  {name:'Skill Focus', type:'General', prereq:'—', desc:'+3 bonus on checks with the chosen skill (+6 once you have 10+ ranks in it).'},
+  {name:'Alertness', type:'General', prereq:'—', desc:'+2 bonus on Perception and Sense Motive checks.'},
+  {name:'Endurance', type:'General', prereq:'—', desc:'+4 bonus on checks to resist nonlethal damage from exertion, and related benefits like sleeping in armor.'},
+  {name:'Diehard', type:'General', prereq:'Endurance', desc:'Automatically stabilize at negative hit points, and can act while below 0 HP without further injuring yourself.'},
+  {name:'Run', type:'General', prereq:'—', desc:'Run at 5x speed (4x in armor) and gain +4 on Acrobatics checks made to jump after a running start.'},
+  {name:'Toughness (Racial variants aside)', type:'General', prereq:'—', desc:'See Toughness above.'},
+  {name:'Natural Spell', type:'General', prereq:'Wild Shape class feature', desc:'Cast spells with only verbal and somatic components while in a wild shape form.'},
+  {name:'Spell Focus', type:'General', prereq:'—', desc:'+1 to the save DC of spells from the chosen school.'},
+  {name:'Greater Spell Focus', type:'General', prereq:'Spell Focus (same school), caster level 8th', desc:'An additional +1 to the save DC of spells from the chosen school (stacks with Spell Focus).'},
+  {name:'Combat Casting', type:'General', prereq:'—', desc:'+4 bonus on concentration checks made to cast defensively or while grappled.'},
+  {name:'Craft Wondrous Item', type:'Item Creation', prereq:'Caster level 3rd', desc:'Craft most magic wondrous items, spending gold and time based on the item\'s market price.'},
+  {name:'Scribe Scroll', type:'Item Creation', prereq:'Caster level 1st', desc:'Create scrolls of any spell you know or have prepared.'},
+  {name:'Brew Potion', type:'Item Creation', prereq:'Caster level 3rd', desc:'Create potions of any spell of 3rd level or lower that you can cast.'},
+  {name:'Extend Spell', type:'Metamagic', prereq:'—', desc:'Doubles a spell\'s duration; uses a spell slot one level higher than the spell\'s actual level.'},
+  {name:'Empower Spell', type:'Metamagic', prereq:'—', desc:'Increases all variable, numeric effects of a spell by 50%; uses a slot two levels higher.'},
+  {name:'Maximize Spell', type:'Metamagic', prereq:'—', desc:'All variable, numeric effects of a spell are maximized; uses a slot three levels higher.'},
+  {name:'Quicken Spell', type:'Metamagic', prereq:'—', desc:'Cast a spell as a swift action instead of its normal casting time; uses a slot four levels higher.'},
+  {name:'Silent Spell', type:'Metamagic', prereq:'—', desc:'Cast a spell without verbal components; uses a slot one level higher.'},
+  {name:'Still Spell', type:'Metamagic', prereq:'—', desc:'Cast a spell without somatic components; uses a slot one level higher.'},
+  {name:'Improved Unarmed Strike', type:'Combat', prereq:'—', desc:'Your unarmed strikes count as a weapon (no attacks of opportunity for attacking unarmed) and deal lethal or nonlethal damage at your choice.'},
+  {name:'Stunning Fist', type:'Combat', prereq:'Dex 13, Int 13, Improved Unarmed Strike, base attack bonus +8', desc:'Attempt to stun a foe with an unarmed strike a limited number of times per day.'},
+  {name:'Improved Grapple', type:'Combat', prereq:'Dex 13, Improved Unarmed Strike', desc:'No attack of opportunity when initiating a grapple, and +2 on grapple checks.'},
+  {name:'Improved Trip', type:'Combat', prereq:'Int 13, Combat Expertise', desc:'No attack of opportunity when tripping, +2 on the check, and a free melee attack if you succeed.'},
+  {name:'Improved Disarm', type:'Combat', prereq:'Int 13, Combat Expertise', desc:'No attack of opportunity when disarming, +2 on the check, and the foe cannot easily disarm you back.'},
+  {name:'Improved Sunder', type:'Combat', prereq:'Str 13, Power Attack', desc:'No attack of opportunity when sundering, and +2 on the combat maneuver check.'},
+  {name:'Shield Focus', type:'Combat', prereq:'Shield Proficiency', desc:'+1 shield bonus to AC when using a shield.'},
+  {name:'Blind-Fight', type:'Combat', prereq:'—', desc:'Reroll a miss chance from concealment once, and enemies get no advantage from your being blinded for locating you.'},
+  {name:'Mounted Combat', type:'Combat', prereq:'Ride 1 rank', desc:'Once per round, make a Ride check to negate a hit against your mount.'},
+  {name:'Eschew Materials', type:'General', prereq:'—', desc:'Cast spells with a material component cost of 1 gp or less without needing the material.'},
+  {name:'Leadership', type:'General', prereq:'Character level 7th', desc:'Attract a loyal cohort and a band of lower-level followers based on your Leadership score.'},
+];
+
+// Spells — curated core-focused list, own-words mechanical summaries.
+// level: 0-9. classes: array of tags (druid, cleric, wizard, sorcerer, ranger, bard, paladin)
+const SPELLS = [
+  {name:'Detect Magic',level:0,school:'Divination',classes:['druid','cleric','wizard','sorcerer','bard'],desc:'Sense magical auras in a cone in front of you; longer study reveals number, school, and strength of each aura.'},
+  {name:'Guidance',level:0,school:'Divination',classes:['druid','cleric'],desc:'+1 competence bonus on one attack roll, save, or skill check made before the spell ends.'},
+  {name:'Stabilize',level:0,school:'Conjuration',classes:['druid','cleric'],desc:'Immediately stabilizes a dying creature at negative hit points so it stops losing HP.'},
+  {name:'Create Water',level:0,school:'Conjuration',classes:['druid','cleric'],desc:'Conjures up to 2 gallons of clean drinking water.'},
+  {name:'Spark',level:0,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'Ignites a small unattended flammable object as though with flint and steel.'},
+  {name:'Resistance',level:0,school:'Abjuration',classes:['druid','cleric','sorcerer','wizard'],desc:'+1 resistance bonus on one saving throw.'},
+  {name:'Light',level:0,school:'Evocation',classes:['druid','cleric','sorcerer','wizard','bard'],desc:'Object glows like a torch, shedding bright light in a 20-ft radius for 10 min/level.'},
+  {name:'Mending',level:0,school:'Transmutation',classes:['druid','cleric','sorcerer','wizard'],desc:'Repairs small amounts of damage to an object (up to 1d4 hp, or breaks of small size).'},
+  {name:'Read Magic',level:0,school:'Divination',classes:['druid','cleric','sorcerer','wizard','bard'],desc:'Read scrolls and spellbooks without a caster level check; identify a magic writing\'s school with study.'},
+  {name:'Purify Food and Drink',level:0,school:'Transmutation',classes:['druid','cleric'],desc:'Makes spoiled, rotten, or poisoned food and water safe and suitable for eating.'},
+  {name:'Entangle',level:1,school:'Transmutation',classes:['druid'],desc:'Plants in a large area wrap around creatures, entangling them; area is difficult terrain while it lasts.'},
+  {name:'Goodberry',level:1,school:'Transmutation',classes:['druid'],desc:'Turns 2d4 berries into rations that each cure 1 hp of damage and nourish for a day (max one benefit per 24 hrs).'},
+  {name:'Longstrider',level:1,school:'Transmutation',classes:['druid','ranger','wizard'],desc:'+10 ft enhancement bonus to your base land speed for the duration.'},
+  {name:'Obscuring Mist',level:1,school:'Conjuration',classes:['druid','sorcerer','wizard'],desc:'Fog fills a 20-ft radius, granting concealment; dispersed by strong wind or fire.'},
+  {name:'Cure Light Wounds',level:1,school:'Conjuration',classes:['druid','cleric','ranger','paladin','bard'],desc:'Heals 1d8 + 1/caster level (max +5) hp of damage, or deals equal damage to undead.'},
+  {name:'Faerie Fire',level:1,school:'Evocation',classes:['druid'],desc:'Outlines creatures in light, negating concealment/invisibility benefits and denying them a bonus from those effects.'},
+  {name:'Magic Fang',level:1,school:'Transmutation',classes:['druid','ranger'],desc:'Grants a +1 enhancement bonus on one natural weapon\'s attack and damage rolls.'},
+  {name:'Speak with Animals',level:1,school:'Divination',classes:['druid','ranger','bard'],desc:'Converse with animals of your choice for the duration.'},
+  {name:'Endure Elements',level:1,school:'Abjuration',classes:['druid','cleric','ranger','paladin'],desc:'Protects the subject from severe heat or cold environmental damage for 24 hours.'},
+  {name:'Magic Missile',level:1,school:'Evocation',classes:['sorcerer','wizard'],desc:'Fires one missile of force per two caster levels (max 5), each dealing 1d4+1 damage, that never misses.'},
+  {name:'Shield',level:1,school:'Abjuration',classes:['sorcerer','wizard'],desc:'Invisible force gives +4 shield AC, blocks magic missiles entirely, and negates Str damage bonus for incoming attacks.'},
+  {name:'Mage Armor',level:1,school:'Conjuration',classes:['sorcerer','wizard'],desc:'+4 armor bonus to AC for the duration, from an invisible field of force.'},
+  {name:'Grease',level:1,school:'Conjuration',classes:['sorcerer','wizard','bard'],desc:'Coats a surface or object in grease, making it difficult terrain or causing held items to be dropped.'},
+  {name:'Sleep',level:1,school:'Enchantment',classes:['sorcerer','wizard','bard'],desc:'Puts up to 4 HD worth of creatures into magical slumber, weakest affected first.'},
+  {name:'Charm Person',level:1,school:'Enchantment',classes:['sorcerer','wizard','bard'],desc:'Makes a humanoid regard you as a trusted friend for the duration.'},
+  {name:'Cure Moderate Wounds',level:2,school:'Conjuration',classes:['druid','cleric','ranger','paladin','bard'],desc:'Heals 2d8 + 1/caster level (max +10) hp of damage, or deals equal damage to undead.'},
+  {name:'Barkskin',level:2,school:'Transmutation',classes:['druid'],desc:'+2 enhancement bonus to natural armor, improving with caster level, for the duration.'},
+  {name:'Flaming Sphere',level:2,school:'Conjuration',classes:['druid','sorcerer','wizard'],desc:'Rolls a 5-ft ball of fire that deals 3d6 fire damage to anything it strikes, directed as a move action.'},
+  {name:'Spider Climb',level:2,school:'Transmutation',classes:['druid','sorcerer','wizard'],desc:'Grants the ability to climb walls and ceilings as easily as walking.'},
+  {name:'Warp Wood',level:2,school:'Transmutation',classes:['druid'],desc:'Bends and warps wood, ruining wooden weapons, doors, or structural planks.'},
+  {name:'Resist Energy',level:2,school:'Abjuration',classes:['druid','cleric','ranger','paladin','sorcerer','wizard'],desc:'Ignores a set amount of damage per attack from the chosen energy type for the duration.'},
+  {name:'Web',level:2,school:'Conjuration',classes:['sorcerer','wizard'],desc:'Fills an area with sticky strands, entangling creatures and potentially trapping them.'},
+  {name:'Scorching Ray',level:2,school:'Evocation',classes:['sorcerer','wizard'],desc:'Fire one ray per four caster levels (max 3), each a ranged touch attack dealing 4d6 fire damage.'},
+  {name:'Mirror Image',level:2,school:'Illusion',classes:['sorcerer','wizard'],desc:'Creates 1d4+1 illusory duplicates of you that absorb attacks meant for you.'},
+  {name:'Invisibility',level:2,school:'Illusion',classes:['sorcerer','wizard','bard'],desc:'Subject becomes invisible for 1 min/level or until it attacks.'},
+  {name:'Call Lightning',level:3,school:'Conjuration',classes:['druid'],desc:'Calls down bolts from a storm-filled sky, each dealing 3d6 electricity damage, usable once per round for several rounds.'},
+  {name:'Cure Serious Wounds',level:3,school:'Conjuration',classes:['druid','cleric','bard'],desc:'Heals 3d8 + 1/caster level (max +15) hp of damage, or deals equal damage to undead.'},
+  {name:'Dominate Animal',level:3,school:'Enchantment',classes:['druid'],desc:'Establishes telepathic control over an animal, directing its actions for the duration.'},
+  {name:'Greater Magic Fang',level:3,school:'Transmutation',classes:['druid','ranger'],desc:'As Magic Fang, but grants up to +3 enhancement bonus and lasts 1 hour/level.'},
+  {name:'Fireball',level:3,school:'Evocation',classes:['sorcerer','wizard'],desc:'A 20-ft radius burst deals 1d6 fire damage per caster level (max 10d6).'},
+  {name:'Lightning Bolt',level:3,school:'Evocation',classes:['sorcerer','wizard'],desc:'A 120-ft line deals 1d6 electricity damage per caster level (max 10d6).'},
+  {name:'Haste',level:3,school:'Transmutation',classes:['sorcerer','wizard','bard'],desc:'Subjects gain +1 attack, +1 AC/Reflex, and +30 ft speed; one extra attack at full bonus when full-attacking.'},
+  {name:'Fly',level:3,school:'Transmutation',classes:['sorcerer','wizard'],desc:'Grants a fly speed of 60 ft with good maneuverability for 1 min/level.'},
+  {name:'Dispel Magic',level:3,school:'Abjuration',classes:['druid','cleric','sorcerer','wizard','bard','paladin'],desc:'Ends one or more ongoing spell effects on a target, object, or in an area.'},
+  {name:'Air Walk',level:4,school:'Transmutation',classes:['druid','cleric'],desc:'Subject can walk on air as if on solid ground for 10 min/level.'},
+  {name:'Flame Strike',level:4,school:'Evocation',classes:['druid','cleric'],desc:'A vertical column of divine fire deals 1d6 damage per caster level (max 15d6) to everything within it.'},
+  {name:'Freedom of Movement',level:4,school:'Abjuration',classes:['druid','cleric','ranger'],desc:'Subject moves normally despite impediments like grapples, paralysis, or magical restraints for the duration.'},
+  {name:'Ice Storm',level:4,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'Hail rains in a cylinder, dealing bludgeoning and cold damage over the area.'},
+  {name:'Enervation',level:4,school:'Necromancy',classes:['sorcerer','wizard'],desc:'Ray imposes 1d4 negative levels on the target with a ranged touch attack.'},
+  {name:'Wall of Fire',level:4,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'Creates a wall of flame that damages creatures passing through or standing near it.'},
+  {name:'Baleful Polymorph',level:5,school:'Transmutation',classes:['druid','sorcerer','wizard'],desc:'Forces a creature to transform into a harmless animal form, often permanently absent a saving throw or later magic.'},
+  {name:'Wall of Thorns',level:5,school:'Conjuration',classes:['druid'],desc:'Creates a dense, damaging wall of thorny brambles that blocks movement.'},
+  {name:'Cone of Cold',level:5,school:'Evocation',classes:['sorcerer','wizard'],desc:'A cone deals 1d6 cold damage per caster level (max 15d6) to everything within it.'},
+  {name:'Teleport',level:5,school:'Conjuration',classes:['sorcerer','wizard'],desc:'Instantly transports you and touched allies to a familiar or studied location.'},
+  {name:'Transmute Rock to Mud',level:5,school:'Transmutation',classes:['druid','sorcerer','wizard'],desc:'Turns natural rock in the area into thick, mucky mud that mires creatures.'},
+  {name:'Antilife Shell',level:6,school:'Abjuration',classes:['druid','cleric'],desc:'A mobile field around you prevents living creatures from passing or attacking through it.'},
+  {name:'Fire Seeds',level:6,school:'Conjuration',classes:['druid'],desc:'Creates acorn grenades or berry bombs that explode with fire damage when thrown or triggered.'},
+  {name:'Chain Lightning',level:6,school:'Evocation',classes:['sorcerer','wizard'],desc:'A bolt strikes a primary target then arcs to secondary targets, all taking electricity damage.'},
+  {name:'Disintegrate',level:6,school:'Transmutation',classes:['sorcerer','wizard'],desc:'A ray reduces a creature or object to fine dust if it fails its save against massive damage.'},
+  {name:'Control Weather',level:7,school:'Transmutation',classes:['druid','cleric'],desc:'Shifts the weather in a large area, changing precipitation, wind, and temperature over the following hours.'},
+  {name:'Fire Storm',level:7,school:'Evocation',classes:['druid','cleric'],desc:'Deals fire damage across a huge area, burning vegetation and igniting flammable objects.'},
+  {name:'Finger of Death',level:7,school:'Necromancy',classes:['druid','sorcerer','wizard'],desc:'Deals massive negative energy damage, potentially killing the target outright on a failed save.'},
+  {name:'Sunburst',level:8,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'A burst of searing radiance deals damage and can blind creatures within a large radius.'},
+  {name:'Whirlwind',level:8,school:'Evocation',classes:['druid'],desc:'You become a whirling cyclone able to move over the battlefield, damaging and tossing creatures caught inside.'},
+  {name:'Shapechange',level:9,school:'Transmutation',classes:['druid','sorcerer','wizard'],desc:'Assume the form of nearly any creature, changing forms freely as a swift action for the duration.'},
+  {name:'Storm of Vengeance',level:9,school:'Conjuration',classes:['druid'],desc:'Summons a massive magical storm that deals escalating damage and effects over several rounds.'},
+  {name:'Foresight',level:9,school:'Divination',classes:['druid','wizard'],desc:'Grants a preternatural sense of danger, granting a bonus to AC and Reflex saves and warning of impending attacks.'},
+];
+
+// Spells-per-day tables by progression type, indexed [casterLevel][spellLevel 0-9]
+const FULL_TABLE = {
+  1:[3,1], 2:[4,2], 3:[4,2,1], 4:[4,3,2], 5:[4,3,2,1], 6:[4,3,3,2], 7:[4,4,3,2,1],
+  8:[4,4,3,3,2], 9:[4,4,4,3,2,1], 10:[4,4,4,3,3,2], 11:[4,4,4,4,3,2,1], 12:[4,4,4,4,3,3,2],
+  13:[4,4,4,4,4,3,2,1], 14:[4,4,4,4,4,3,3,2], 15:[4,4,4,4,4,4,3,2,1], 16:[4,4,4,4,4,4,3,3,2],
+  17:[4,4,4,4,4,4,4,3,2,1], 18:[4,4,4,4,4,4,4,3,3,2], 19:[4,4,4,4,4,4,4,4,4,3], 20:[4,4,4,4,4,4,4,4,4,4]
+};
+const MEDIUM_TABLE = { // e.g. Bard-style, levels 0-6, starts at class level 1
+  1:[4,2],2:[4,3],3:[4,3,1],4:[4,4,2],5:[4,4,3],6:[4,4,3,1],7:[4,4,4,2],8:[4,4,4,3],9:[4,4,4,3,1],
+  10:[4,4,4,4,2],11:[4,4,4,4,3],12:[4,4,4,4,3,1],13:[4,4,4,4,4,2],14:[4,4,4,4,4,3],15:[4,4,4,4,4,3,1],
+  16:[4,4,4,4,4,4,2],17:[4,4,4,4,4,4,3],18:[4,4,4,4,4,4,3,1],19:[4,4,4,4,4,4,4,2],20:[4,4,4,4,4,4,4,3]
+};
+const LOW_TABLE = { // e.g. Paladin/Ranger-style, levels 1-4, starts casting at class level 4
+  4:[0],5:[1],6:[1],7:[1,0],8:[1,1],9:[1,1],10:[1,1,0],11:[1,1,1],12:[2,1,1],13:[2,1,1,0],
+  14:[2,2,1,1],15:[2,2,1,1],16:[2,2,2,1],17:[3,2,2,1],18:[3,3,2,2],19:[3,3,3,2],20:[3,3,3,3]
+};
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+function defaultChar(name){
+  return {
+    name: name || 'New Character',
+    info:{name:name||'', player:'', race:'', size:'medium', gender:'', age:'', height:'', weight:'', hair:'', eyes:'', alignment:'', deity:'', background:'', languages:''},
+    classes:[{name:'',level:1,bab:'full',fort:'good',ref:'poor',will:'poor'}],
+    abilities:{str:{base:10,enh:0,misc:0,temp:0},dex:{base:10,enh:0,misc:0,temp:0},con:{base:10,enh:0,misc:0,temp:0},int:{base:10,enh:0,misc:0,temp:0},wis:{base:10,enh:0,misc:0,temp:0},cha:{base:10,enh:0,misc:0,temp:0}},
+    hp:{max:0,current:0,nonlethal:0,temp:0},
+    speed:{land:30,fly:0,swim:0,climb:0},
+    xp:{current:0,next:1000},
+    ac:{armor:0,shield:0,natural:0,deflect:0,dodge:0,temp:0,maxDex:99,acp:0},
+    saves:{fort:{misc:0,temp:0},ref:{misc:0,temp:0},will:{misc:0,temp:0}},
+    combat:{cmbMisc:0,cmdMisc:0,initMisc:0},
+    weapons:[],
+    skills:{}, // name -> {ranks, classSkill, misc}
+    feats:[],
+    traits:[],
+    notes:{features:''},
+    casters:[],
+    spellsPrepared:[],
+    currency:{pp:0,gp:0,sp:0,cp:0},
+    gear:[]
+  };
+}
+
+let CHAR = null;
+let CHAR_ID = null;
+let VERSION = null;
+let saveTimer = null;
+
+/* =========================================================================
+   STORAGE — uses Claude's persistent storage when available (inside a
+   Claude artifact), and transparently falls back to the browser's own
+   localStorage when this file is opened standalone (downloaded, hosted
+   on GitHub Pages, etc). Either way character data survives a reload;
+   localStorage just means "on this device/browser" rather than synced.
+   ========================================================================= */
+let STORAGE_BACKEND = 'none';
+
+async function detectStorageBackend(){
+  if(typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function'){
+    try{
+      await window.storage.set('pf1e:probe', '1', false);
+      STORAGE_BACKEND = 'claude';
+      return;
+    }catch(e){ /* fall through */ }
+  }
+  try{
+    localStorage.setItem('pf1e:probe','1');
+    localStorage.removeItem('pf1e:probe');
+    STORAGE_BACKEND = 'local';
+  }catch(e){
+    STORAGE_BACKEND = 'none';
+  }
+}
+
+async function storageGet(key){
+  if(STORAGE_BACKEND==='claude'){
+    try{ const r = await window.storage.get(key, false); return r ? r.value : null; }catch(e){ return null; }
+  }
+  if(STORAGE_BACKEND==='local'){
+    try{ return localStorage.getItem(key); }catch(e){ return null; }
+  }
+  return null;
+}
+async function storageSet(key, value){
+  if(STORAGE_BACKEND==='claude'){
+    try{ await window.storage.set(key, value, false); return true; }catch(e){ return false; }
+  }
+  if(STORAGE_BACKEND==='local'){
+    try{ localStorage.setItem(key, value); return true; }catch(e){ return false; }
+  }
+  return false;
+}
+async function storageDelete(key){
+  if(STORAGE_BACKEND==='claude'){
+    try{ await window.storage.delete(key, false); }catch(e){}
+  } else if(STORAGE_BACKEND==='local'){
+    try{ localStorage.removeItem(key); }catch(e){}
+  }
+}
+
+async function listCharacters(){
+  const raw = await storageGet('pf1e:index');
+  try{ return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
+}
+async function saveIndex(list){
+  await storageSet('pf1e:index', JSON.stringify(list));
+}
+async function loadChar(id){
+  const raw = await storageGet('pf1e:char:'+id);
+  try{ return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+}
+async function persistChar(){
+  if(!CHAR_ID) return;
+  const ok = await storageSet('pf1e:char:'+CHAR_ID, JSON.stringify(CHAR));
+  if(ok){
+    const list = await listCharacters();
+    const entry = list.find(c=>c.id===CHAR_ID);
+    if(entry){ entry.name = CHAR.info.name || CHAR.name || 'Unnamed'; entry.updated = Date.now(); }
+    await saveIndex(list);
+    document.getElementById('saveStatus').textContent = 'Saved';
+  } else {
+    document.getElementById('saveStatus').textContent = 'Save failed — use Export to back up manually';
+  }
+}
+function queueSave(){
+  document.getElementById('saveStatus').textContent = 'Saving…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(persistChar, 500);
+}
+
+async function showPicker(){
+  const overlay = document.getElementById('pickerOverlay');
+  const app = document.getElementById('app');
+  overlay.style.display='flex'; app.style.display='none';
+  const list = await listCharacters();
+  const box = document.getElementById('charList');
+  box.innerHTML = '';
+  if(list.length===0){
+    box.innerHTML = '<div class="helptext">No characters saved yet — create your first below.</div>';
+  }
+  list.sort((a,b)=>(b.updated||0)-(a.updated||0)).forEach(c=>{
+    const div = document.createElement('div');
+    div.className = 'char-item';
+    div.innerHTML = `<div><div class="cn">${escapeHtml(c.name||'Unnamed')}</div><div class="cm">Updated ${new Date(c.updated||Date.now()).toLocaleDateString()}</div></div><span class="tag">Open →</span>`;
+    div.onclick = ()=>openCharacter(c.id);
+    box.appendChild(div);
+  });
+}
+
+async function openCharacter(id){
+  const data = await loadChar(id);
+  CHAR = data || defaultChar('New Character');
+  CHAR_ID = id;
+  document.getElementById('pickerOverlay').style.display='none';
+  document.getElementById('app').style.display='block';
+  renderAll();
+}
+
+async function createCharacter(name){
+  const id = 'c'+Date.now();
+  const list = await listCharacters();
+  list.push({id, name, updated:Date.now()});
+  await saveIndex(list);
+  const ch = defaultChar(name);
+  ch.info.name = name;
+  await storageSet('pf1e:char:'+id, JSON.stringify(ch));
+  openCharacter(id);
+}
+
+async function importCharacterFromFile(file){
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if(!data || !data.info){ toast('That file doesn\'t look like a character export'); return; }
+    const id = 'c'+Date.now();
+    const list = await listCharacters();
+    list.push({id, name: data.info.name || data.name || 'Imported Character', updated:Date.now()});
+    await saveIndex(list);
+    await storageSet('pf1e:char:'+id, JSON.stringify(data));
+    openCharacter(id);
+    toast('Character imported');
+  }catch(e){
+    toast('Import failed — file isn\'t valid JSON');
+  }
+}
+function exportCurrentCharacter(){
+  if(!CHAR) return;
+  const blob = new Blob([JSON.stringify(CHAR, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeName = (CHAR.info.name||'character').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  a.href = url; a.download = `pf1e-${safeName}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast('Character exported');
+}
+
+document.getElementById('newCharBtn').onclick = ()=>{
+  const v = document.getElementById('newCharName').value.trim();
+  if(!v) return toast('Give the character a name first');
+  createCharacter(v);
+};
+document.getElementById('switchCharBtn').onclick = showPicker;
+document.getElementById('deleteCharBtn').onclick = async ()=>{
+  if(!confirm('Delete this character permanently? This cannot be undone.')) return;
+  const list = await listCharacters();
+  const filtered = list.filter(c=>c.id!==CHAR_ID);
+  await saveIndex(filtered);
+  await storageDelete('pf1e:char:'+CHAR_ID);
+  showPicker();
+};
+document.getElementById('exportCharBtn').onclick = exportCurrentCharacter;
+document.getElementById('importCharBtn').onclick = ()=>document.getElementById('importFileInput').click();
+document.getElementById('importFileInput').onchange = (e)=>{
+  const f = e.target.files[0];
+  if(f) importCharacterFromFile(f);
+  e.target.value = '';
+};
+document.getElementById('importCharBtnPicker').onclick = ()=>document.getElementById('importFileInput').click();
+
+/* =========================================================================
+   HELPERS
+   ========================================================================= */
+function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function mod(score){ return Math.floor((score-10)/2); }
+function fmt(n){ n = Math.round(n); return (n>=0?'+':'')+n; }
+function getPath(obj, path){ return path.split('.').reduce((o,k)=>(o==null?o:o[k]), obj); }
+function setPath(obj, path, val){
+  const parts = path.split('.');
+  let o = obj;
+  for(let i=0;i<parts.length-1;i++) o = o[parts[i]];
+  o[parts[parts.length-1]] = val;
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function abilityMod(key){
+  const a = CHAR.abilities[key];
+  return mod(a.base + (a.enh||0) + (a.misc||0) + (a.temp||0));
+}
+function abilityScore(key){
+  const a = CHAR.abilities[key];
+  return a.base + (a.enh||0) + (a.misc||0) + (a.temp||0);
+}
+function totalLevel(){ return CHAR.classes.reduce((s,c)=>s+(Number(c.level)||0),0); }
+function totalBAB(){
+  return CHAR.classes.reduce((s,c)=>{
+    const L = Number(c.level)||0;
+    if(c.bab==='full') return s + L;
+    if(c.bab==='3/4') return s + Math.floor(L*0.75);
+    return s + Math.floor(L*0.5);
+  },0);
+}
+function baseSave(prog, level){
+  if(prog==='good') return 2 + Math.floor(level/2);
+  return Math.floor(level/3);
+}
+function totalBaseSave(kind){
+  return CHAR.classes.reduce((s,c)=>{
+    const L = Number(c.level)||0;
+    return s + baseSave(c[kind], L);
+  },0);
+}
+function sizeMod(){ return SIZES[CHAR.info.size||'medium'].ac; }
+function carryMultiplier(){ return SIZES[CHAR.info.size||'medium'].carry; }
+
+/* =========================================================================
+   RENDER: bindings
+   ========================================================================= */
+function bindInputs(root){
+  root.querySelectorAll('[data-bind]').forEach(el=>{
+    const path = el.getAttribute('data-bind');
+    const val = getPath(CHAR, path);
+    if(el.type==='checkbox') el.checked = !!val;
+    else el.value = (val===undefined||val===null) ? '' : val;
+    el.oninput = ()=>{
+      let v = el.type==='checkbox' ? el.checked : el.value;
+      if(el.type==='number') v = v===''? 0 : parseFloat(v);
+      setPath(CHAR, path, v);
+      queueSave();
+      recalcAll();
+    };
+  });
+}
+
+function renderAll(){
+  document.getElementById('headerName').textContent = CHAR.info.name || 'Unnamed';
+  document.getElementById('headerSub').textContent = `Level ${totalLevel()} · ${CHAR.info.race||'—'} · Pathfinder 1st Edition`;
+  document.getElementById('sealLetter').textContent = (CHAR.info.name||'?').trim().charAt(0).toUpperCase() || '?';
+
+  renderAbilities();
+  renderClasses();
+  renderWeapons();
+  renderSkills();
+  renderFeatsTraits();
+  renderCasters();
+  renderSpellsPrepared();
+  renderGear();
+  bindInputs(document.getElementById('app'));
+  renderReference();
+  recalcAll();
+}
+
+function renderAbilities(){
+  const grid = document.getElementById('abilityGrid');
+  grid.innerHTML = '';
+  ABILS.forEach(k=>{
+    const box = document.createElement('div');
+    box.className = 'ability-box';
+    box.innerHTML = `
+      <div class="name">${ABIL_LABEL[k]}</div>
+      <div class="mod" id="mod-${k}">+0</div>
+      <div class="score" id="score-${k}">10</div>
+      <div class="breakdown">
+        <div class="lbl">Base</div><div></div>
+        <input type="number" data-bind="abilities.${k}.base" title="Base score">
+        <input type="number" data-bind="abilities.${k}.enh" title="Enhancement">
+        <div class="lbl">Base / Enh.</div><div></div>
+        <input type="number" data-bind="abilities.${k}.misc" title="Misc">
+        <input type="number" data-bind="abilities.${k}.temp" title="Temp">
+        <div class="lbl">Misc / Temp</div>
+      </div>`;
+    grid.appendChild(box);
+  });
+}
+
+function renderClasses(){
+  const box = document.getElementById('classRows');
+  box.innerHTML = '';
+  CHAR.classes.forEach((c,i)=>{
+    const row = document.createElement('div');
+    row.className = 'class-row';
+    row.innerHTML = `
+      <div class="field"><label>Class</label><input type="text" value="${escapeHtml(c.name)}" data-i="${i}" data-f="name"></div>
+      <div class="field"><label>Level</label><input type="number" value="${c.level}" data-i="${i}" data-f="level"></div>
+      <div class="field"><label>BAB</label>
+        <select data-i="${i}" data-f="bab">
+          <option value="full" ${c.bab==='full'?'selected':''}>Full</option>
+          <option value="3/4" ${c.bab==='3/4'?'selected':''}>3/4</option>
+          <option value="half" ${c.bab==='half'?'selected':''}>Half</option>
+        </select>
+      </div>
+      <div class="field"><label>Fort</label>
+        <select data-i="${i}" data-f="fort">
+          <option value="good" ${c.fort==='good'?'selected':''}>Good</option>
+          <option value="poor" ${c.fort==='poor'?'selected':''}>Poor</option>
+        </select>
+      </div>
+      <div class="field"><label>Ref</label>
+        <select data-i="${i}" data-f="ref">
+          <option value="good" ${c.ref==='good'?'selected':''}>Good</option>
+          <option value="poor" ${c.ref==='poor'?'selected':''}>Poor</option>
+        </select>
+      </div>
+      <div class="field"><label>Will</label>
+        <select data-i="${i}" data-f="will">
+          <option value="good" ${c.will==='good'?'selected':''}>Good</option>
+          <option value="poor" ${c.will==='poor'?'selected':''}>Poor</option>
+        </select>
+      </div>
+      <button class="iconbtn" data-del="${i}" title="Remove class">✕</button>
+    `;
+    box.appendChild(row);
+  });
+  box.querySelectorAll('[data-f]').forEach(el=>{
+    el.onchange = el.oninput = ()=>{
+      const i = +el.getAttribute('data-i'), f = el.getAttribute('data-f');
+      let v = el.value;
+      if(f==='level') v = parseInt(v)||0;
+      CHAR.classes[i][f] = v;
+      queueSave(); recalcAll();
+      if(f==='name') renderCasterClassOptions();
+    };
+  });
+  box.querySelectorAll('[data-del]').forEach(el=>{
+    el.onclick = ()=>{
+      CHAR.classes.splice(+el.getAttribute('data-del'),1);
+      renderClasses(); queueSave(); recalcAll();
+    };
+  });
+}
+document.getElementById('addClassBtn').onclick = ()=>{
+  CHAR.classes.push({name:'',level:1,bab:'full',fort:'poor',will:'poor',ref:'poor'});
+  renderClasses(); queueSave(); recalcAll();
+};
+
+function renderWeapons(){
+  const body = document.getElementById('weaponsBody');
+  body.innerHTML = '';
+  CHAR.weapons.forEach((w,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeHtml(w.name)}" data-i="${i}" data-f="name"></td>
+      <td class="num"><input type="number" value="${w.atkMod||0}" data-i="${i}" data-f="atkMod"></td>
+      <td class="num mini-total" id="w-total-${i}">+0</td>
+      <td><input type="text" value="${escapeHtml(w.damage||'')}" data-i="${i}" data-f="damage" placeholder="1d6+0"></td>
+      <td class="num"><input type="text" value="${escapeHtml(w.crit||'x2')}" data-i="${i}" data-f="crit"></td>
+      <td><div class="pill-toggle"><button data-i="${i}" data-f="ranged" data-v="0" class="${!w.ranged?'on':''}">Melee</button><button data-i="${i}" data-f="ranged" data-v="1" class="${w.ranged?'on':''}">Ranged</button></div></td>
+      <td><input type="text" value="${escapeHtml(w.type||'')}" data-i="${i}" data-f="type" placeholder="S/P/B"></td>
+      <td><button class="iconbtn" data-del="${i}">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+  body.querySelectorAll('input[data-f]').forEach(el=>{
+    el.oninput = ()=>{
+      const i = +el.getAttribute('data-i'), f = el.getAttribute('data-f');
+      CHAR.weapons[i][f] = f==='atkMod' ? (parseFloat(el.value)||0) : el.value;
+      queueSave(); recalcAll();
+    };
+  });
+  body.querySelectorAll('button[data-f=ranged]').forEach(el=>{
+    el.onclick = ()=>{
+      const i = +el.getAttribute('data-i');
+      CHAR.weapons[i].ranged = el.getAttribute('data-v')==='1';
+      renderWeapons(); queueSave(); recalcAll();
+    };
+  });
+  body.querySelectorAll('[data-del]').forEach(el=>{
+    el.onclick = ()=>{ CHAR.weapons.splice(+el.getAttribute('data-del'),1); renderWeapons(); queueSave(); recalcAll(); };
+  });
+}
+document.getElementById('addWeaponBtn').onclick = ()=>{
+  CHAR.weapons.push({name:'New Weapon',atkMod:0,damage:'1d6+0',crit:'x2',ranged:false,type:''});
+  renderWeapons(); queueSave(); recalcAll();
+};
+
+function renderSkills(){
+  const body = document.getElementById('skillsBody');
+  body.innerHTML = '';
+  SKILLS.forEach(([name,abil,acp,trained])=>{
+    if(!CHAR.skills[name]) CHAR.skills[name] = {ranks:0, classSkill:false, misc:0};
+    const s = CHAR.skills[name];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="checkwrap"><input type="checkbox" ${s.classSkill?'checked':''} data-name="${name}" data-f="classSkill"></td>
+      <td>${escapeHtml(name)}${trained?' <span class="tag" title="Trained only">T</span>':''}${acp?' <span title="Armor check penalty applies">†</span>':''}</td>
+      <td class="num mono" style="text-align:center;color:var(--text-dim);">${ABIL_LABEL[abil]}</td>
+      <td class="num"><input type="number" value="${s.ranks}" data-name="${name}" data-f="ranks" min="0"></td>
+      <td class="num" style="text-align:center;" id="sk-tr-${cssSafe(name)}">—</td>
+      <td class="num"><input type="number" value="${s.misc||0}" data-name="${name}" data-f="misc"></td>
+      <td class="num mini-total" id="sk-total-${cssSafe(name)}">+0</td>
+    `;
+    body.appendChild(tr);
+  });
+  body.querySelectorAll('input[data-f]').forEach(el=>{
+    el.oninput = el.onchange = ()=>{
+      const name = el.getAttribute('data-name'), f = el.getAttribute('data-f');
+      let v = el.type==='checkbox' ? el.checked : parseFloat(el.value)||0;
+      CHAR.skills[name][f] = v;
+      queueSave(); recalcAll();
+    };
+  });
+}
+function cssSafe(s){ return s.replace(/[^a-z0-9]/gi,'_'); }
+
+function renderFeatsTraits(){
+  const featBox = document.getElementById('featsList');
+  featBox.innerHTML='';
+  CHAR.feats.forEach((f,i)=>{
+    const row = document.createElement('div');
+    row.className='field'; row.style.display='flex'; row.style.gap='6px'; row.style.alignItems='center';
+    row.innerHTML = `<input type="text" value="${escapeHtml(f)}" data-i="${i}" style="flex:1;">
+      <button class="iconbtn" data-del="${i}">✕</button>`;
+    featBox.appendChild(row);
+  });
+  featBox.querySelectorAll('input').forEach(el=>{
+    el.oninput = ()=>{ CHAR.feats[+el.getAttribute('data-i')] = el.value; queueSave(); };
+  });
+  featBox.querySelectorAll('[data-del]').forEach(el=>{
+    el.onclick = ()=>{ CHAR.feats.splice(+el.getAttribute('data-del'),1); renderFeatsTraits(); queueSave(); };
+  });
+
+  const traitBox = document.getElementById('traitsList');
+  traitBox.innerHTML='';
+  CHAR.traits.forEach((t,i)=>{
+    const row = document.createElement('div');
+    row.className='field'; row.style.display='flex'; row.style.gap='6px'; row.style.alignItems='center';
+    row.innerHTML = `<input type="text" value="${escapeHtml(t)}" data-i="${i}" style="flex:1;">
+      <button class="iconbtn" data-del="${i}">✕</button>`;
+    traitBox.appendChild(row);
+  });
+  traitBox.querySelectorAll('input').forEach(el=>{
+    el.oninput = ()=>{ CHAR.traits[+el.getAttribute('data-i')] = el.value; queueSave(); };
+  });
+  traitBox.querySelectorAll('[data-del]').forEach(el=>{
+    el.onclick = ()=>{ CHAR.traits.splice(+el.getAttribute('data-del'),1); renderFeatsTraits(); queueSave(); };
+  });
+}
+document.getElementById('addFeatBtn').onclick = ()=>{ CHAR.feats.push('New Feat'); renderFeatsTraits(); queueSave(); };
+document.getElementById('addTraitBtn').onclick = ()=>{ CHAR.traits.push('New Trait'); renderFeatsTraits(); queueSave(); };
+
+function renderCasterClassOptions(){
+  document.querySelectorAll('.caster-class-select').forEach(sel=>{
+    const cur = sel.value;
+    sel.innerHTML = CHAR.classes.map(c=>`<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)||'(unnamed class)'}</option>`).join('');
+    sel.value = cur;
+  });
+}
+
+function renderCasters(){
+  const box = document.getElementById('casterRows');
+  box.innerHTML='';
+  CHAR.casters.forEach((cs,i)=>{
+    const row = document.createElement('div');
+    row.className='class-row';
+    row.innerHTML = `
+      <div class="field"><label>Class</label>
+        <select class="caster-class-select" data-i="${i}" data-f="className">
+          ${CHAR.classes.map(c=>`<option value="${escapeHtml(c.name)}" ${cs.className===c.name?'selected':''}>${escapeHtml(c.name)||'(unnamed)'}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Ability</label>
+        <select data-i="${i}" data-f="ability">
+          ${ABILS.map(a=>`<option value="${a}" ${cs.ability===a?'selected':''}>${ABIL_LABEL[a]}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Progression</label>
+        <select data-i="${i}" data-f="prog">
+          <option value="full" ${cs.prog==='full'?'selected':''}>Full (9-lvl)</option>
+          <option value="medium" ${cs.prog==='medium'?'selected':''}>Medium (6-lvl)</option>
+          <option value="low" ${cs.prog==='low'?'selected':''}>Low (4-lvl)</option>
+        </select>
+      </div>
+      <div class="field"><label>Caster Lvl Override</label><input type="number" data-i="${i}" data-f="clOverride" value="${cs.clOverride||''}" placeholder="auto"></div>
+      <div class="field"><label>Save DC Base</label><div class="stat" style="padding:6px;"><span class="mono" id="caster-dc-${i}">10</span></div></div>
+      <button class="iconbtn" data-del="${i}">✕</button>
+    `;
+    box.appendChild(row);
+  });
+  box.querySelectorAll('[data-f]').forEach(el=>{
+    el.onchange = el.oninput = ()=>{
+      const i=+el.getAttribute('data-i'), f=el.getAttribute('data-f');
+      CHAR.casters[i][f] = f==='clOverride' ? (el.value===''?null:parseInt(el.value)) : el.value;
+      queueSave(); recalcAll();
+    };
+  });
+  box.querySelectorAll('[data-del]').forEach(el=>{
+    el.onclick = ()=>{ CHAR.casters.splice(+el.getAttribute('data-del'),1); renderCasters(); queueSave(); recalcAll(); };
+  });
+}
+document.getElementById('addCasterBtn').onclick = ()=>{
+  CHAR.casters.push({className:CHAR.classes[0]?CHAR.classes[0].name:'', ability:'wis', prog:'full', clOverride:null});
+  renderCasters(); queueSave(); recalcAll();
+};
+
+function renderSpellsPrepared(){
+  const body = document.getElementById('spellsPreparedBody');
+  body.innerHTML='';
+  CHAR.spellsPrepared.forEach((s,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="num"><input type="number" value="${s.level}" data-i="${i}" data-f="level" min="0" max="9"></td>
+      <td><input type="text" value="${escapeHtml(s.name)}" data-i="${i}" data-f="name"></td>
+      <td><input type="text" value="${escapeHtml(s.school||'')}" data-i="${i}" data-f="school"></td>
+      <td class="checkwrap"><input type="checkbox" ${s.prepared?'checked':''} data-i="${i}" data-f="prepared"></td>
+      <td class="checkwrap"><input type="checkbox" ${s.used?'checked':''} data-i="${i}" data-f="used"></td>
+      <td><button class="iconbtn" data-del="${i}">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+  body.querySelectorAll('[data-f]').forEach(el=>{
+    el.oninput = el.onchange = ()=>{
+      const i=+el.getAttribute('data-i'), f=el.getAttribute('data-f');
+      let v = el.type==='checkbox'?el.checked:el.value;
+      if(f==='level') v = parseInt(v)||0;
+      CHAR.spellsPrepared[i][f]=v; queueSave();
+    };
+  });
+  body.querySelectorAll('[data-del]').forEach(el=>{
+    el.onclick=()=>{ CHAR.spellsPrepared.splice(+el.getAttribute('data-del'),1); renderSpellsPrepared(); queueSave(); };
+  });
+}
+document.getElementById('addSpellRowBtn').onclick = ()=>{
+  CHAR.spellsPrepared.push({level:0,name:'New Spell',school:'',prepared:false,used:false});
+  renderSpellsPrepared(); queueSave();
+};
+
+function renderGear(){
+  const body = document.getElementById('gearBody');
+  body.innerHTML='';
+  CHAR.gear.forEach((g,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeHtml(g.name)}" data-i="${i}" data-f="name"></td>
+      <td class="num"><input type="number" value="${g.qty}" data-i="${i}" data-f="qty"></td>
+      <td class="num"><input type="number" value="${g.weight}" data-i="${i}" data-f="weight" step="0.1"></td>
+      <td class="num mini-total" id="gear-total-${i}">0</td>
+      <td><input type="text" value="${escapeHtml(g.notes||'')}" data-i="${i}" data-f="notes"></td>
+      <td><button class="iconbtn" data-del="${i}">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+  body.querySelectorAll('[data-f]').forEach(el=>{
+    el.oninput = ()=>{
+      const i=+el.getAttribute('data-i'), f=el.getAttribute('data-f');
+      let v = (f==='qty'||f==='weight') ? (parseFloat(el.value)||0) : el.value;
+      CHAR.gear[i][f]=v; queueSave(); recalcAll();
+    };
+  });
+  body.querySelectorAll('[data-del]').forEach(el=>{
+    el.onclick=()=>{ CHAR.gear.splice(+el.getAttribute('data-del'),1); renderGear(); queueSave(); recalcAll(); };
+  });
+}
+document.getElementById('addGearBtn').onclick = ()=>{
+  CHAR.gear.push({name:'New Item',qty:1,weight:0,notes:''});
+  renderGear(); queueSave(); recalcAll();
+};
+
+/* =========================================================================
+   RECALC — the "everything's connected" engine
+   ========================================================================= */
+function recalcAll(){
+  // header
+  document.getElementById('headerName').textContent = CHAR.info.name || 'Unnamed';
+  document.getElementById('headerSub').textContent = `Level ${totalLevel()} · ${CHAR.info.race||'—'} · Pathfinder 1st Edition`;
+  document.getElementById('sealLetter').textContent = (CHAR.info.name||'?').trim().charAt(0).toUpperCase() || '?';
+
+  // ability mods
+  ABILS.forEach(k=>{
+    const m = abilityMod(k);
+    const modEl = document.getElementById('mod-'+k);
+    const scoreEl = document.getElementById('score-'+k);
+    if(modEl) modEl.textContent = fmt(m);
+    if(scoreEl) scoreEl.textContent = abilityScore(k);
+  });
+
+  const bab = totalBAB();
+  const lvl = totalLevel();
+  document.getElementById('ov-level').textContent = lvl;
+  document.getElementById('ov-bab').textContent = fmt(bab);
+  document.getElementById('ov-hd').textContent = lvl + 'd*';
+  document.getElementById('ov-cr').textContent = CHAR.classes[0] ? (CHAR.classes[0].name||'—') : '—';
+
+  const xpPct = CHAR.xp.next>0 ? Math.min(100, (CHAR.xp.current/CHAR.xp.next)*100) : 0;
+  document.getElementById('xpFill').style.width = xpPct+'%';
+
+  // AC
+  const szAC = sizeMod();
+  document.getElementById('acSizeReadout').textContent = fmt(szAC);
+  const dexModRaw = abilityMod('dex');
+  const dexCapped = Math.min(dexModRaw, (CHAR.ac.maxDex===undefined||CHAR.ac.maxDex===null||isNaN(CHAR.ac.maxDex))?99:CHAR.ac.maxDex);
+  const ac = 10 + (CHAR.ac.armor||0) + (CHAR.ac.shield||0) + dexCapped + szAC + (CHAR.ac.natural||0) + (CHAR.ac.deflect||0) + (CHAR.ac.dodge||0) + (CHAR.ac.temp||0);
+  const touch = 10 + dexCapped + szAC + (CHAR.ac.deflect||0) + (CHAR.ac.dodge||0) + (CHAR.ac.temp||0);
+  const ff = 10 + (CHAR.ac.armor||0) + (CHAR.ac.shield||0) + szAC + (CHAR.ac.natural||0) + (CHAR.ac.deflect||0) + (CHAR.ac.temp||0);
+  document.getElementById('c-ac').textContent = ac;
+  document.getElementById('c-touch').textContent = touch;
+  document.getElementById('c-ff').textContent = ff;
+  document.getElementById('c-init').textContent = fmt(dexModRaw + (CHAR.combat.initMisc||0));
+
+  // saves
+  const savesBody = document.getElementById('savesBody');
+  const saveDefs = [['Fortitude','fort','con'],['Reflex','ref','dex'],['Will','will','wis']];
+  savesBody.innerHTML = saveDefs.map(([label,key,abil])=>{
+    const base = totalBaseSave(key);
+    const am = abilityMod(abil);
+    const misc = CHAR.saves[key].misc||0, temp = CHAR.saves[key].temp||0;
+    const total = base+am+misc+temp;
+    return `<tr>
+      <td>${label} <span class="tag">${ABIL_LABEL[abil]}</span></td>
+      <td class="num mono">${fmt(base)}</td>
+      <td class="num mono">${fmt(am)}</td>
+      <td class="num"><input type="number" value="${misc}" data-save="${key}" data-f="misc" style="width:50px;"></td>
+      <td class="num"><input type="number" value="${temp}" data-save="${key}" data-f="temp" style="width:50px;"></td>
+      <td class="num"></td>
+      <td class="num mini-total">${fmt(total)}</td>
+    </tr>`;
+  }).join('');
+  savesBody.querySelectorAll('input').forEach(el=>{
+    el.oninput = ()=>{
+      const k = el.getAttribute('data-save'), f = el.getAttribute('data-f');
+      CHAR.saves[k][f] = parseFloat(el.value)||0;
+      queueSave(); recalcAll();
+    };
+  });
+
+  // CMB / CMD
+  const strMod = abilityMod('str');
+  const cmb = bab + strMod + szAC + (CHAR.combat.cmbMisc||0);
+  const cmd = 10 + bab + strMod + dexModRaw + szAC + (CHAR.combat.cmdMisc||0);
+  document.getElementById('c-cmb').textContent = fmt(cmb);
+  document.getElementById('c-cmd').textContent = cmd;
+
+  // weapons
+  CHAR.weapons.forEach((w,i)=>{
+    const abilMod = w.ranged ? dexModRaw : strMod;
+    const total = bab + abilMod + szAC + (w.atkMod||0);
+    const el = document.getElementById('w-total-'+i);
+    if(el) el.textContent = fmt(total);
+  });
+
+  // skills
+  const acp = CHAR.ac.acp||0;
+  SKILLS.forEach(([name,abil,acpFlag])=>{
+    const s = CHAR.skills[name];
+    if(!s) return;
+    const am = abilityMod(abil);
+    const csBonus = (s.classSkill && s.ranks>0) ? 3 : 0;
+    const penalty = acpFlag ? acp : 0;
+    const total = am + (s.ranks||0) + csBonus + (s.misc||0) - penalty;
+    const totalEl = document.getElementById('sk-total-'+cssSafe(name));
+    const trEl = document.getElementById('sk-tr-'+cssSafe(name));
+    if(totalEl) totalEl.textContent = fmt(total);
+    if(trEl) trEl.textContent = csBonus ? '+3' : '—';
+  });
+
+  // spell slots
+  renderSpellSlotTables();
+  ABILS.forEach(()=>{});
+  document.querySelectorAll('[id^="caster-dc-"]').forEach((el)=>{
+    const i = +el.id.split('-').pop();
+    const cs = CHAR.casters[i];
+    if(!cs) return;
+    // base DC shown for a 0-level spell; table below shows per-level
+  });
+
+  // encumbrance
+  const strScore = abilityScore('str');
+  const capMult = carryMultiplier();
+  const {light, med, heavy} = carryCapacity(strScore);
+  const lightC = Math.round(light*capMult), medC = Math.round(med*capMult), heavyC = Math.round(heavy*capMult);
+  document.getElementById('load-light').textContent = lightC;
+  document.getElementById('load-med').textContent = medC;
+  document.getElementById('load-heavy').textContent = heavyC;
+  let carried = 0;
+  CHAR.gear.forEach((g,i)=>{
+    const t = (g.qty||0)*(g.weight||0);
+    carried += t;
+    const el = document.getElementById('gear-total-'+i);
+    if(el) el.textContent = t.toFixed(1);
+  });
+  document.getElementById('load-current').textContent = carried.toFixed(1);
+  const pct = heavyC>0 ? Math.min(100, (carried/heavyC)*100) : 0;
+  document.getElementById('loadFill').style.width = pct+'%';
+  const statusEl = document.getElementById('loadStatus');
+  let label = 'Light load.';
+  if(carried>heavyC) label = 'Overloaded — you can barely move.';
+  else if(carried>medC) label = 'Heavy load — speed reduced, check penalties apply.';
+  else if(carried>lightC) label = 'Medium load — speed reduced, some check penalties apply.';
+  statusEl.textContent = label + ' Max load scales automatically with Strength score and Size.';
+
+  // currency total (in gp)
+  const gpTotal = (CHAR.currency.pp||0)*10 + (CHAR.currency.gp||0) + (CHAR.currency.sp||0)/10 + (CHAR.currency.cp||0)/100;
+  document.getElementById('gp-total').textContent = gpTotal.toFixed(2)+' gp';
+
+  document.getElementById('skillPointsReadout').textContent = '';
+}
+
+function carryCapacity(str){
+  // PF1e core carrying capacity table (medium biped), str 1-20 explicit, extrapolated beyond
+  const table = {
+    1:[3,6,10],2:[6,13,20],3:[10,20,30],4:[13,26,40],5:[16,33,50],6:[20,40,60],7:[23,46,70],
+    8:[26,53,80],9:[30,60,90],10:[33,66,100],11:[38,76,115],12:[43,86,130],13:[50,100,150],
+    14:[58,116,175],15:[66,133,200],16:[76,153,230],17:[86,173,260],18:[100,200,300],
+    19:[116,233,350],20:[133,266,400]
+  };
+  if(str<1) str=1;
+  if(table[str]) return {light:table[str][0], med:table[str][1], heavy:table[str][2]};
+  if(str>20){
+    // each 10 str beyond 20 quadruples; approximate via formula for str 21-29 (x4 per +10)
+    let base = table[20];
+    let over = str-20;
+    let mult = Math.pow(4, Math.floor(over/10));
+    let remainder = over%10;
+    const stepTable = [1,1.34,1.75,2.34,3.0,4,5.34,6.6,8.66,10]; // rough multiplier steps within a decade
+    let stepMult = remainder===0?1:stepTable[remainder]||1;
+    return {light: base[0]*mult*stepMult, med: base[1]*mult*stepMult, heavy: base[2]*mult*stepMult};
+  }
+  return {light:0,med:0,heavy:0};
+}
+
+function bonusSpellsForLevel(mod, spellLevel){
+  if(spellLevel===0) return 0;
+  if(mod < spellLevel) return 0;
+  return Math.floor((mod-spellLevel)/4)+1;
+}
+
+function renderSpellSlotTables(){
+  const container = document.getElementById('spellSlotTables');
+  container.innerHTML = '';
+  CHAR.casters.forEach((cs,i)=>{
+    const cls = CHAR.classes.find(c=>c.name===cs.className);
+    const cl = cs.clOverride!=null ? cs.clOverride : (cls ? Number(cls.level)||0 : 0);
+    const am = abilityMod(cs.ability);
+    const table = cs.prog==='full' ? FULL_TABLE : cs.prog==='medium' ? MEDIUM_TABLE : LOW_TABLE;
+    const row = table[cl] || table[Math.max(...Object.keys(table).map(Number).filter(k=>k<=cl))] || [];
+    const dcBase = 10 + am;
+    const dcEl = document.getElementById('caster-dc-'+i);
+    if(dcEl) dcEl.textContent = dcBase+' + spell level';
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.marginBottom = '12px';
+    let cells = '';
+    for(let L=0; L<=9; L++){
+      const base = row[L]||0;
+      const bonus = bonusSpellsForLevel(am, L);
+      if(base===0 && L>0) continue;
+      const total = base + (base>0 || L===0 ? bonus : 0);
+      if(total===0 && L>0) continue;
+      cells += `<div class="stat"><div class="v">${total}</div><div class="l">Lvl ${L} ${bonus>0 && base>0 ? '('+base+'+'+bonus+')' : ''}</div></div>`;
+    }
+    card.innerHTML = `<h3>${escapeHtml(cs.className||'Caster')} <span class="hint">Caster Level ${cl} · ${ABIL_LABEL[cs.ability]} ${fmt(am)} · DC ${dcBase}+lvl</span></h3>
+      <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(90px,1fr));">${cells || '<span class="helptext">No spells per day yet at this caster level.</span>'}</div>`;
+    container.appendChild(card);
+  });
+}
+
+/* =========================================================================
+   REFERENCE TAB
+   ========================================================================= */
+function renderReference(){
+  const type = document.getElementById('refType').value;
+  const q = document.getElementById('refSearch').value.trim().toLowerCase();
+  const box = document.getElementById('refResults');
+  box.innerHTML = '';
+  let items = [];
+  if(type==='spells'){
+    items = SPELLS.filter(s=> !q || s.name.toLowerCase().includes(q) || s.school.toLowerCase().includes(q) || s.classes.join(' ').includes(q))
+      .sort((a,b)=>a.level-b.level || a.name.localeCompare(b.name));
+    items.forEach(s=>{
+      const div = document.createElement('div');
+      div.className='result-item';
+      div.innerHTML = `<div class="rname">${escapeHtml(s.name)} <span class="tag">Lvl ${s.level}</span></div>
+        <div class="rmeta">${escapeHtml(s.school)} · ${s.classes.map(c=>c[0].toUpperCase()+c.slice(1)).join(', ')}</div>
+        <div class="rdesc">${escapeHtml(s.desc)}<br><button class="btn small" style="margin-top:8px;" data-add-spell="${escapeHtml(s.name)}">+ Add to sheet</button></div>`;
+      div.onclick = (e)=>{ if(e.target.tagName==='BUTTON') return; div.classList.toggle('open'); };
+      box.appendChild(div);
+    });
+    box.querySelectorAll('[data-add-spell]').forEach(btn=>{
+      btn.onclick = (e)=>{
+        e.stopPropagation();
+        const name = btn.getAttribute('data-add-spell');
+        const sp = SPELLS.find(s=>s.name===name);
+        CHAR.spellsPrepared.push({level:sp.level, name:sp.name, school:sp.school, prepared:false, used:false});
+        renderSpellsPrepared(); queueSave();
+        toast(sp.name+' added to your spell list');
+      };
+    });
+  } else if(type==='feats'){
+    items = FEATS.filter(f=> !q || f.name.toLowerCase().includes(q) || f.type.toLowerCase().includes(q));
+    items.forEach(f=>{
+      const div = document.createElement('div');
+      div.className='result-item';
+      div.innerHTML = `<div class="rname">${escapeHtml(f.name)} <span class="tag">${escapeHtml(f.type)}</span></div>
+        <div class="rmeta">Prereq: ${escapeHtml(f.prereq)}</div>
+        <div class="rdesc">${escapeHtml(f.desc)}<br><button class="btn small" style="margin-top:8px;" data-add-feat="${escapeHtml(f.name)}">+ Add to sheet</button></div>`;
+      div.onclick = (e)=>{ if(e.target.tagName==='BUTTON') return; div.classList.toggle('open'); };
+      box.appendChild(div);
+    });
+    box.querySelectorAll('[data-add-feat]').forEach(btn=>{
+      btn.onclick = (e)=>{
+        e.stopPropagation();
+        CHAR.feats.push(btn.getAttribute('data-add-feat'));
+        renderFeatsTraits(); queueSave();
+        toast(btn.getAttribute('data-add-feat')+' added to your feats');
+      };
+    });
+  } else {
+    items = SKILLS.filter(([name])=> !q || name.toLowerCase().includes(q));
+    items.forEach(([name,abil,acpFlag,trained])=>{
+      const key = name.startsWith('Knowledge')?'Knowledge':name;
+      const div = document.createElement('div');
+      div.className='result-item';
+      div.innerHTML = `<div class="rname">${escapeHtml(name)} <span class="tag">${ABIL_LABEL[abil]}</span></div>
+        <div class="rmeta">${trained?'Trained only':'Usable untrained'}${acpFlag?' · Armor check penalty applies':''}</div>
+        <div class="rdesc">${escapeHtml(SKILL_REF[key]||'')}</div>`;
+      div.onclick = ()=>div.classList.toggle('open');
+      box.appendChild(div);
+    });
+  }
+  if(items.length===0) box.innerHTML = '<div class="helptext" style="padding:14px;">No matches. Try a different term.</div>';
+}
+document.getElementById('refType').oninput = renderReference;
+document.getElementById('refSearch').oninput = renderReference;
+
+/* =========================================================================
+   TABS
+   ========================================================================= */
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.tab');
+  if(!btn) return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+btn.getAttribute('data-tab')).classList.add('active');
+});
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+(async function init(){
+  await detectStorageBackend();
+  const modeEl = document.getElementById('storageMode');
+  if(modeEl){
+    if(STORAGE_BACKEND==='claude') modeEl.textContent = '';
+    else if(STORAGE_BACKEND==='local') modeEl.textContent = '· saving to this browser only';
+    else modeEl.textContent = '· auto-save unavailable — use Export often';
+  }
+  showPicker();
+})();
+</script>
+</body>
+</html>
