@@ -523,6 +523,9 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
           <option value="feats">Feats</option>
           <option value="skills">Skills</option>
         </select>
+        <select id="refClass" style="max-width:170px;">
+          <option value="all">All Classes</option>
+        </select>
         <input type="text" id="refSearch" placeholder="Search by name, school, or type…">
       </div>
       <div class="results" id="refResults"></div>
@@ -698,73 +701,186 @@ const FEATS = [
 // Spells — curated core-focused list, own-words mechanical summaries.
 // level: 0-9. classes: array of tags (druid, cleric, wizard, sorcerer, ranger, bard, paladin)
 const SPELLS = [
-  {name:'Detect Magic',level:0,school:'Divination',classes:['druid','cleric','wizard','sorcerer','bard'],desc:'Sense magical auras in a cone in front of you; longer study reveals number, school, and strength of each aura.'},
+  {name:'Create Water',level:0,school:'Conjuration',classes:['druid','cleric'],desc:'Conjures up to 2 gallons of clean drinking water per caster level.'},
+  {name:'Detect Magic',level:0,school:'Divination',classes:['druid','cleric','wizard','sorcerer','bard'],desc:'Sense magical auras in a cone in front of you; longer study reveals number, school, and strength of each.'},
+  {name:'Detect Poison',level:0,school:'Divination',classes:['druid'],desc:'Determine if a creature, object, or food is poisoned, and how dangerous the poison is.'},
+  {name:'Flare',level:0,school:'Evocation',classes:['druid'],desc:'A burst of light dazzles one creature for 1 minute, giving a -1 penalty on attack rolls.'},
   {name:'Guidance',level:0,school:'Divination',classes:['druid','cleric'],desc:'+1 competence bonus on one attack roll, save, or skill check made before the spell ends.'},
-  {name:'Stabilize',level:0,school:'Conjuration',classes:['druid','cleric'],desc:'Immediately stabilizes a dying creature at negative hit points so it stops losing HP.'},
-  {name:'Create Water',level:0,school:'Conjuration',classes:['druid','cleric'],desc:'Conjures up to 2 gallons of clean drinking water.'},
-  {name:'Spark',level:0,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'Ignites a small unattended flammable object as though with flint and steel.'},
-  {name:'Resistance',level:0,school:'Abjuration',classes:['druid','cleric','sorcerer','wizard'],desc:'+1 resistance bonus on one saving throw.'},
+  {name:'Know Direction',level:0,school:'Divination',classes:['druid'],desc:'Instantly determine which way is north.'},
   {name:'Light',level:0,school:'Evocation',classes:['druid','cleric','sorcerer','wizard','bard'],desc:'Object glows like a torch, shedding bright light in a 20-ft radius for 10 min/level.'},
-  {name:'Mending',level:0,school:'Transmutation',classes:['druid','cleric','sorcerer','wizard'],desc:'Repairs small amounts of damage to an object (up to 1d4 hp, or breaks of small size).'},
-  {name:'Read Magic',level:0,school:'Divination',classes:['druid','cleric','sorcerer','wizard','bard'],desc:'Read scrolls and spellbooks without a caster level check; identify a magic writing\'s school with study.'},
-  {name:'Purify Food and Drink',level:0,school:'Transmutation',classes:['druid','cleric'],desc:'Makes spoiled, rotten, or poisoned food and water safe and suitable for eating.'},
-  {name:'Entangle',level:1,school:'Transmutation',classes:['druid'],desc:'Plants in a large area wrap around creatures, entangling them; area is difficult terrain while it lasts.'},
-  {name:'Goodberry',level:1,school:'Transmutation',classes:['druid'],desc:'Turns 2d4 berries into rations that each cure 1 hp of damage and nourish for a day (max one benefit per 24 hrs).'},
-  {name:'Longstrider',level:1,school:'Transmutation',classes:['druid','ranger','wizard'],desc:'+10 ft enhancement bonus to your base land speed for the duration.'},
-  {name:'Obscuring Mist',level:1,school:'Conjuration',classes:['druid','sorcerer','wizard'],desc:'Fog fills a 20-ft radius, granting concealment; dispersed by strong wind or fire.'},
-  {name:'Cure Light Wounds',level:1,school:'Conjuration',classes:['druid','cleric','ranger','paladin','bard'],desc:'Heals 1d8 + 1/caster level (max +5) hp of damage, or deals equal damage to undead.'},
-  {name:'Faerie Fire',level:1,school:'Evocation',classes:['druid'],desc:'Outlines creatures in light, negating concealment/invisibility benefits and denying them a bonus from those effects.'},
-  {name:'Magic Fang',level:1,school:'Transmutation',classes:['druid','ranger'],desc:'Grants a +1 enhancement bonus on one natural weapon\'s attack and damage rolls.'},
-  {name:'Speak with Animals',level:1,school:'Divination',classes:['druid','ranger','bard'],desc:'Converse with animals of your choice for the duration.'},
-  {name:'Endure Elements',level:1,school:'Abjuration',classes:['druid','cleric','ranger','paladin'],desc:'Protects the subject from severe heat or cold environmental damage for 24 hours.'},
-  {name:'Magic Missile',level:1,school:'Evocation',classes:['sorcerer','wizard'],desc:'Fires one missile of force per two caster levels (max 5), each dealing 1d4+1 damage, that never misses.'},
-  {name:'Shield',level:1,school:'Abjuration',classes:['sorcerer','wizard'],desc:'Invisible force gives +4 shield AC, blocks magic missiles entirely, and negates Str damage bonus for incoming attacks.'},
-  {name:'Mage Armor',level:1,school:'Conjuration',classes:['sorcerer','wizard'],desc:'+4 armor bonus to AC for the duration, from an invisible field of force.'},
-  {name:'Grease',level:1,school:'Conjuration',classes:['sorcerer','wizard','bard'],desc:'Coats a surface or object in grease, making it difficult terrain or causing held items to be dropped.'},
-  {name:'Sleep',level:1,school:'Enchantment',classes:['sorcerer','wizard','bard'],desc:'Puts up to 4 HD worth of creatures into magical slumber, weakest affected first.'},
+  {name:'Mending',level:0,school:'Transmutation',classes:['druid','cleric','sorcerer','wizard'],desc:'Repairs small amounts of damage to an object (up to 1d4 hp, or minor breaks).'},
+  {name:'Purify Food and Drink',level:0,school:'Transmutation',classes:['druid','cleric'],desc:'Makes spoiled, rotten, or poisoned food and water safe to consume.'},
+  {name:'Read Magic',level:0,school:'Divination',classes:['druid','cleric','sorcerer','wizard','bard'],desc:'Read scrolls and spellbooks without a caster level check, and identify a magic writing\'s school.'},
+  {name:'Resistance',level:0,school:'Abjuration',classes:['druid','cleric','sorcerer','wizard'],desc:'+1 resistance bonus on one saving throw.'},
+  {name:'Spark',level:0,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'Ignites a small unattended flammable object as though with flint and steel.'},
+  {name:'Stabilize',level:0,school:'Conjuration',classes:['druid','cleric'],desc:'Immediately stabilizes a dying creature at negative hit points.'},
+  {name:'Virtue',level:0,school:'Transmutation',classes:['druid'],desc:'Subject gains 1 temporary hit point for the duration.'},
+  {name:'Calm Animals',level:1,school:'Enchantment',classes:['druid'],desc:'Soothes and pacifies a group of animals, making them passive and unlikely to act.'},
+  {name:'Charm Animal',level:1,school:'Enchantment',classes:['druid'],desc:'Makes an animal regard you as a trusted friend for the duration.'},
   {name:'Charm Person',level:1,school:'Enchantment',classes:['sorcerer','wizard','bard'],desc:'Makes a humanoid regard you as a trusted friend for the duration.'},
-  {name:'Cure Moderate Wounds',level:2,school:'Conjuration',classes:['druid','cleric','ranger','paladin','bard'],desc:'Heals 2d8 + 1/caster level (max +10) hp of damage, or deals equal damage to undead.'},
+  {name:'Cure Light Wounds',level:1,school:'Conjuration',classes:['druid','cleric','ranger','paladin','bard'],desc:'Heals 1d8 + 1/caster level (max +5) hp of damage, or deals equal damage to undead.'},
+  {name:'Detect Animals or Plants',level:1,school:'Divination',classes:['druid'],desc:'Determine the presence and general nature of animals or plants in the area.'},
+  {name:'Detect Snares and Pits',level:1,school:'Divination',classes:['druid'],desc:'Reveals natural or mechanical hazards and simple traps in the area.'},
+  {name:'Endure Elements',level:1,school:'Abjuration',classes:['druid','cleric','ranger','paladin'],desc:'Protects the subject from severe heat or cold environmental damage for 24 hours.'},
+  {name:'Entangle',level:1,school:'Transmutation',classes:['druid'],desc:'Plants in a large area wrap around creatures, entangling them; area is difficult terrain while it lasts.'},
+  {name:'Faerie Fire',level:1,school:'Evocation',classes:['druid'],desc:'Outlines creatures in light, negating concealment/invisibility benefits from those effects.'},
+  {name:'Goodberry',level:1,school:'Transmutation',classes:['druid'],desc:'Turns 2d4 berries into rations that each cure 1 hp of damage (max one benefit per 24 hrs).'},
+  {name:'Grease',level:1,school:'Conjuration',classes:['sorcerer','wizard','bard'],desc:'Coats a surface or object in grease, making it difficult terrain or causing held items to be dropped.'},
+  {name:'Hide from Animals',level:1,school:'Abjuration',classes:['druid'],desc:'Renders you and your allies undetectable to animals for the duration.'},
+  {name:'Jump',level:1,school:'Transmutation',classes:['druid'],desc:'+10 ft enhancement bonus (scaling) on Acrobatics checks made to jump.'},
+  {name:'Longstrider',level:1,school:'Transmutation',classes:['druid','ranger','wizard'],desc:'+10 ft enhancement bonus to your base land speed for the duration.'},
+  {name:'Mage Armor',level:1,school:'Conjuration',classes:['sorcerer','wizard'],desc:'+4 armor bonus to AC for the duration, from an invisible field of force.'},
+  {name:'Magic Fang',level:1,school:'Transmutation',classes:['druid','ranger'],desc:'Grants a +1 enhancement bonus on one natural weapon\'s attack and damage rolls.'},
+  {name:'Magic Missile',level:1,school:'Evocation',classes:['sorcerer','wizard'],desc:'Fires one missile of force per two caster levels (max 5), each dealing 1d4+1 damage, that never misses.'},
+  {name:'Magic Stone',level:1,school:'Transmutation',classes:['druid'],desc:'Imbues up to 3 pebbles with magic; thrown as weapons dealing 1d6+1 force damage.'},
+  {name:'Obscuring Mist',level:1,school:'Conjuration',classes:['druid','sorcerer','wizard'],desc:'Fog fills a 20-ft radius, granting concealment; dispersed by strong wind or fire.'},
+  {name:'Pass without Trace',level:1,school:'Transmutation',classes:['druid'],desc:'Erases your group\'s tracks, making them nearly impossible to follow.'},
+  {name:'Produce Flame',level:1,school:'Evocation',classes:['druid'],desc:'Conjures flame in your hand usable as a melee touch attack or thrown weapon.'},
+  {name:'Shield',level:1,school:'Abjuration',classes:['sorcerer','wizard'],desc:'Invisible force gives +4 shield AC, blocks magic missiles entirely, and negates Str damage bonus for incoming attacks.'},
+  {name:'Shillelagh',level:1,school:'Transmutation',classes:['druid'],desc:'A club or quarterstaff becomes a magic weapon dealing extra damage for the duration.'},
+  {name:'Sleep',level:1,school:'Enchantment',classes:['sorcerer','wizard','bard'],desc:'Puts up to 4 HD worth of creatures into magical slumber, weakest affected first.'},
+  {name:'Speak with Animals',level:1,school:'Divination',classes:['druid','ranger','bard'],desc:'Converse with animals of your choice for the duration.'},
+  {name:'Summon Nature\'s Ally I',level:1,school:'Conjuration',classes:['druid'],desc:'Calls a 1st-level nature creature from the summon list to fight for you for 1 round/level.'},
   {name:'Barkskin',level:2,school:'Transmutation',classes:['druid'],desc:'+2 enhancement bonus to natural armor, improving with caster level, for the duration.'},
-  {name:'Flaming Sphere',level:2,school:'Conjuration',classes:['druid','sorcerer','wizard'],desc:'Rolls a 5-ft ball of fire that deals 3d6 fire damage to anything it strikes, directed as a move action.'},
-  {name:'Spider Climb',level:2,school:'Transmutation',classes:['druid','sorcerer','wizard'],desc:'Grants the ability to climb walls and ceilings as easily as walking.'},
-  {name:'Warp Wood',level:2,school:'Transmutation',classes:['druid'],desc:'Bends and warps wood, ruining wooden weapons, doors, or structural planks.'},
-  {name:'Resist Energy',level:2,school:'Abjuration',classes:['druid','cleric','ranger','paladin','sorcerer','wizard'],desc:'Ignores a set amount of damage per attack from the chosen energy type for the duration.'},
-  {name:'Web',level:2,school:'Conjuration',classes:['sorcerer','wizard'],desc:'Fills an area with sticky strands, entangling creatures and potentially trapping them.'},
-  {name:'Scorching Ray',level:2,school:'Evocation',classes:['sorcerer','wizard'],desc:'Fire one ray per four caster levels (max 3), each a ranged touch attack dealing 4d6 fire damage.'},
-  {name:'Mirror Image',level:2,school:'Illusion',classes:['sorcerer','wizard'],desc:'Creates 1d4+1 illusory duplicates of you that absorb attacks meant for you.'},
+  {name:'Bear\'s Endurance',level:2,school:'Transmutation',classes:['druid'],desc:'Subject gains +4 enhancement bonus to Constitution for the duration.'},
+  {name:'Bull\'s Strength',level:2,school:'Transmutation',classes:['druid'],desc:'Subject gains +4 enhancement bonus to Strength for the duration.'},
+  {name:'Cat\'s Grace',level:2,school:'Transmutation',classes:['druid'],desc:'Subject gains +4 enhancement bonus to Dexterity for the duration.'},
+  {name:'Chill Metal',level:2,school:'Transmutation',classes:['druid'],desc:'Metal objects in the area become icy cold, damaging anyone touching or wearing them.'},
+  {name:'Delay Poison',level:2,school:'Abjuration',classes:['druid'],desc:'Poison in the subject\'s system is suspended for the duration, doing no further harm.'},
+  {name:'Fire Trap',level:2,school:'Abjuration',classes:['druid'],desc:'Wards an object so opening it triggers a fiery explosion against the intruder.'},
+  {name:'Flame Blade',level:2,school:'Evocation',classes:['druid'],desc:'Conjures a blade of fire usable as a magic scimitar dealing 1d8 fire damage.'},
+  {name:'Flaming Sphere',level:2,school:'Conjuration',classes:['druid','sorcerer','wizard'],desc:'Rolls a 5-ft ball of fire that deals 3d6 fire damage to anything it strikes.'},
+  {name:'Fog Cloud',level:2,school:'Conjuration',classes:['druid'],desc:'Fog fills a 20-ft radius, obscuring all sight beyond 5 feet.'},
+  {name:'Gust of Wind',level:2,school:'Evocation',classes:['druid'],desc:'A severe blast of wind can knock down and push back creatures in a line.'},
+  {name:'Heat Metal',level:2,school:'Transmutation',classes:['druid'],desc:'Metal objects become searing hot, damaging anyone touching or wearing them.'},
+  {name:'Hold Animal',level:2,school:'Enchantment',classes:['druid'],desc:'Paralyzes one animal for the duration unless it saves.'},
   {name:'Invisibility',level:2,school:'Illusion',classes:['sorcerer','wizard','bard'],desc:'Subject becomes invisible for 1 min/level or until it attacks.'},
-  {name:'Call Lightning',level:3,school:'Conjuration',classes:['druid'],desc:'Calls down bolts from a storm-filled sky, each dealing 3d6 electricity damage, usable once per round for several rounds.'},
-  {name:'Cure Serious Wounds',level:3,school:'Conjuration',classes:['druid','cleric','bard'],desc:'Heals 3d8 + 1/caster level (max +15) hp of damage, or deals equal damage to undead.'},
+  {name:'Mirror Image',level:2,school:'Illusion',classes:['sorcerer','wizard'],desc:'Creates 1d4+1 illusory duplicates of you that absorb attacks meant for you.'},
+  {name:'Owl\'s Wisdom',level:2,school:'Transmutation',classes:['druid'],desc:'Subject gains +4 enhancement bonus to Wisdom for the duration.'},
+  {name:'Reduce Animal',level:2,school:'Transmutation',classes:['druid'],desc:'Shrinks one willing animal, granting size-based combat and skill adjustments.'},
+  {name:'Resist Energy',level:2,school:'Abjuration',classes:['druid','cleric','ranger','paladin','sorcerer','wizard'],desc:'Ignores a set amount of damage per attack from the chosen energy type for the duration.'},
+  {name:'Restoration, Lesser',level:2,school:'Conjuration',classes:['druid'],desc:'Dispels magical ability penalties or removes 1 point of ability drain/fatigue.'},
+  {name:'Scorching Ray',level:2,school:'Evocation',classes:['sorcerer','wizard'],desc:'Fire one ray per four caster levels (max 3), each a ranged touch attack dealing 4d6 fire damage.'},
+  {name:'Soften Earth and Stone',level:2,school:'Transmutation',classes:['druid'],desc:'Turns natural stone to loose earth, or earth to mud, in the area.'},
+  {name:'Spider Climb',level:2,school:'Transmutation',classes:['druid','sorcerer','wizard'],desc:'Grants the ability to climb walls and ceilings as easily as walking.'},
+  {name:'Summon Nature\'s Ally II',level:2,school:'Conjuration',classes:['druid'],desc:'Calls a 2nd-level nature creature from the summon list to fight for you.'},
+  {name:'Summon Swarm',level:2,school:'Conjuration',classes:['druid'],desc:'Summons a swarm of bats, rats, or spiders to attack your foes.'},
+  {name:'Tree Shape',level:2,school:'Transmutation',classes:['druid'],desc:'Turns you into a tree-like creature, granting near-total concealment while you hide.'},
+  {name:'Warp Wood',level:2,school:'Transmutation',classes:['druid'],desc:'Bends and warps wood, ruining wooden weapons, doors, or structural planks.'},
+  {name:'Web',level:2,school:'Conjuration',classes:['sorcerer','wizard'],desc:'Fills an area with sticky strands, entangling creatures and potentially trapping them.'},
+  {name:'Wood Shape',level:2,school:'Transmutation',classes:['druid'],desc:'Reshapes wooden objects into a new form of roughly the same size.'},
+  {name:'Call Lightning',level:3,school:'Evocation',classes:['druid'],desc:'Calls down bolts from a storm-filled sky, each dealing 3d6 electricity damage, usable once per round.'},
+  {name:'Contagion',level:3,school:'Necromancy',classes:['druid'],desc:'Infects the target with a virulent disease of your choice.'},
+  {name:'Cure Moderate Wounds',level:3,school:'Conjuration',classes:['druid','cleric','ranger','paladin','bard'],desc:'Heals 2d8 + 1/caster level (max +10) hp of damage, or deals equal damage to undead.'},
+  {name:'Daylight',level:3,school:'Evocation',classes:['druid'],desc:'Object sheds bright light as if it were full daylight, in a 60-ft radius.'},
+  {name:'Diminish Plants',level:3,school:'Transmutation',classes:['druid'],desc:'Stunts plant growth in an area, or shrinks normal plants to half size.'},
   {name:'Dominate Animal',level:3,school:'Enchantment',classes:['druid'],desc:'Establishes telepathic control over an animal, directing its actions for the duration.'},
-  {name:'Greater Magic Fang',level:3,school:'Transmutation',classes:['druid','ranger'],desc:'As Magic Fang, but grants up to +3 enhancement bonus and lasts 1 hour/level.'},
   {name:'Fireball',level:3,school:'Evocation',classes:['sorcerer','wizard'],desc:'A 20-ft radius burst deals 1d6 fire damage per caster level (max 10d6).'},
-  {name:'Lightning Bolt',level:3,school:'Evocation',classes:['sorcerer','wizard'],desc:'A 120-ft line deals 1d6 electricity damage per caster level (max 10d6).'},
-  {name:'Haste',level:3,school:'Transmutation',classes:['sorcerer','wizard','bard'],desc:'Subjects gain +1 attack, +1 AC/Reflex, and +30 ft speed; one extra attack at full bonus when full-attacking.'},
   {name:'Fly',level:3,school:'Transmutation',classes:['sorcerer','wizard'],desc:'Grants a fly speed of 60 ft with good maneuverability for 1 min/level.'},
-  {name:'Dispel Magic',level:3,school:'Abjuration',classes:['druid','cleric','sorcerer','wizard','bard','paladin'],desc:'Ends one or more ongoing spell effects on a target, object, or in an area.'},
+  {name:'Greater Magic Fang',level:3,school:'Transmutation',classes:['druid','ranger'],desc:'As Magic Fang, but grants up to +3 enhancement bonus and lasts 1 hour/level.'},
+  {name:'Haste',level:3,school:'Transmutation',classes:['sorcerer','wizard','bard'],desc:'Subjects gain +1 attack, +1 AC/Reflex, and +30 ft speed; one extra attack at full bonus when full-attacking.'},
+  {name:'Lightning Bolt',level:3,school:'Evocation',classes:['sorcerer','wizard'],desc:'A 120-ft line deals 1d6 electricity damage per caster level (max 10d6).'},
+  {name:'Meld into Stone',level:3,school:'Transmutation',classes:['druid'],desc:'Merge your body and possessions into a block of stone for the duration.'},
+  {name:'Neutralize Poison',level:3,school:'Conjuration',classes:['druid'],desc:'Neutralizes venom in the subject\'s body, or renders a poisonous item harmless.'},
+  {name:'Plant Growth',level:3,school:'Transmutation',classes:['druid'],desc:'Snarls existing vegetation into difficult terrain, or overgrows a garden into abundance.'},
+  {name:'Poison',level:3,school:'Necromancy',classes:['druid'],desc:'Touch attack poisons the target, dealing ongoing Constitution damage.'},
+  {name:'Protection from Energy',level:3,school:'Abjuration',classes:['druid'],desc:'Absorbs a large pool of damage from the chosen energy type before the spell ends.'},
+  {name:'Quench',level:3,school:'Transmutation',classes:['druid'],desc:'Extinguishes nonmagical fires in the area, and can weaken fire-based creatures or effects.'},
+  {name:'Sleet Storm',level:3,school:'Conjuration',classes:['druid'],desc:'Blinding sleet reduces vision to 5 feet and makes the ground slick and difficult.'},
+  {name:'Snare',level:3,school:'Transmutation',classes:['druid'],desc:'Creates a magical trap that entangles and holds a creature that triggers it.'},
+  {name:'Speak with Plants',level:3,school:'Divination',classes:['druid'],desc:'Converse with plants and plant creatures for the duration.'},
+  {name:'Spike Growth',level:3,school:'Transmutation',classes:['druid'],desc:'Vegetation in the area becomes hard and sharply pointed, damaging creatures that move through.'},
+  {name:'Stone Shape',level:3,school:'Transmutation',classes:['druid'],desc:'Reshapes natural stone into a new form of roughly the same size.'},
+  {name:'Summon Nature\'s Ally III',level:3,school:'Conjuration',classes:['druid'],desc:'Calls a 3rd-level nature creature from the summon list to fight for you.'},
+  {name:'Water Breathing',level:3,school:'Transmutation',classes:['druid'],desc:'Grants the subjects the ability to breathe underwater for the duration.'},
+  {name:'Wind Wall',level:3,school:'Evocation',classes:['druid'],desc:'A wall of strong wind deflects small ranged attacks and gases passing through it.'},
   {name:'Air Walk',level:4,school:'Transmutation',classes:['druid','cleric'],desc:'Subject can walk on air as if on solid ground for 10 min/level.'},
-  {name:'Flame Strike',level:4,school:'Evocation',classes:['druid','cleric'],desc:'A vertical column of divine fire deals 1d6 damage per caster level (max 15d6) to everything within it.'},
-  {name:'Freedom of Movement',level:4,school:'Abjuration',classes:['druid','cleric','ranger'],desc:'Subject moves normally despite impediments like grapples, paralysis, or magical restraints for the duration.'},
-  {name:'Ice Storm',level:4,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'Hail rains in a cylinder, dealing bludgeoning and cold damage over the area.'},
+  {name:'Antiplant Shell',level:4,school:'Abjuration',classes:['druid'],desc:'A mobile field wards you from plant creatures and their attacks.'},
+  {name:'Command Plants',level:4,school:'Transmutation',classes:['druid'],desc:'Compels plant creatures within range to obey a single command.'},
+  {name:'Control Water',level:4,school:'Transmutation',classes:['druid'],desc:'Raises or lowers water level, or moves water/mud in a large area.'},
+  {name:'Cure Serious Wounds',level:4,school:'Conjuration',classes:['druid','cleric','bard'],desc:'Heals 3d8 + 1/caster level (max +15) hp of damage, or deals equal damage to undead.'},
+  {name:'Dispel Magic',level:4,school:'Abjuration',classes:['druid','cleric','sorcerer','wizard','bard','paladin'],desc:'Ends one or more ongoing spell effects on a target, object, or in an area.'},
   {name:'Enervation',level:4,school:'Necromancy',classes:['sorcerer','wizard'],desc:'Ray imposes 1d4 negative levels on the target with a ranged touch attack.'},
-  {name:'Wall of Fire',level:4,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'Creates a wall of flame that damages creatures passing through or standing near it.'},
-  {name:'Baleful Polymorph',level:5,school:'Transmutation',classes:['druid','sorcerer','wizard'],desc:'Forces a creature to transform into a harmless animal form, often permanently absent a saving throw or later magic.'},
-  {name:'Wall of Thorns',level:5,school:'Conjuration',classes:['druid'],desc:'Creates a dense, damaging wall of thorny brambles that blocks movement.'},
+  {name:'Flame Strike',level:4,school:'Evocation',classes:['druid','cleric'],desc:'A vertical column of divine fire deals 1d6 damage per caster level (max 15d6) to everything within it.'},
+  {name:'Freedom of Movement',level:4,school:'Abjuration',classes:['druid','cleric','ranger'],desc:'Subject moves normally despite impediments like grapples, paralysis, or magical restraints.'},
+  {name:'Giant Vermin',level:4,school:'Transmutation',classes:['druid'],desc:'Turns centipedes, spiders, or scorpions into giant versions under your control.'},
+  {name:'Ice Storm',level:4,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'Hail rains in a cylinder, dealing bludgeoning and cold damage over the area.'},
+  {name:'Reincarnate',level:4,school:'Transmutation',classes:['druid'],desc:'Restores a dead creature to life in a new, randomly determined body.'},
+  {name:'Repel Vermin',level:4,school:'Abjuration',classes:['druid'],desc:'A mobile barrier keeps normal and giant vermin at bay, harming those that attack through it.'},
+  {name:'Rusting Grasp',level:4,school:'Transmutation',classes:['druid'],desc:'Your touch corrodes iron and alloys of iron, destroying weapons and armor.'},
+  {name:'Scrying',level:4,school:'Divination',classes:['druid'],desc:'Creates an invisible magical sensor that lets you see and hear a chosen subject.'},
+  {name:'Spike Stones',level:4,school:'Transmutation',classes:['druid'],desc:'Camouflaged rock spikes rise in an area, damaging and slowing creatures that pass over them.'},
+  {name:'Summon Nature\'s Ally IV',level:4,school:'Conjuration',classes:['druid'],desc:'Calls a 4th-level nature creature from the summon list to fight for you.'},
+  {name:'Animal Growth',level:5,school:'Transmutation',classes:['druid'],desc:'Doubles the size of up to two animals, boosting their Strength, Constitution, and attacks.'},
+  {name:'Awaken',level:5,school:'Transmutation',classes:['druid'],desc:'Grants an animal or tree human-like intelligence and the ability to speak.'},
+  {name:'Baleful Polymorph',level:5,school:'Transmutation',classes:['druid','sorcerer','wizard'],desc:'Forces a creature to transform into a harmless animal form, often lasting a very long time.'},
+  {name:'Call Lightning Storm',level:5,school:'Evocation',classes:['druid'],desc:'As Call Lightning, but each bolt deals 5d6 damage and can strike more often.'},
+  {name:'Commune with Nature',level:5,school:'Divination',classes:['druid'],desc:'Become aware of terrain, plants, minerals, and creatures within a large radius.'},
   {name:'Cone of Cold',level:5,school:'Evocation',classes:['sorcerer','wizard'],desc:'A cone deals 1d6 cold damage per caster level (max 15d6) to everything within it.'},
+  {name:'Control Winds',level:5,school:'Transmutation',classes:['druid'],desc:'Change wind direction and strength in a large area for the duration.'},
+  {name:'Cure Critical Wounds',level:5,school:'Conjuration',classes:['druid'],desc:'Heals 4d8 + 1/caster level (max +20) hp of damage, or deals equal damage to undead.'},
+  {name:'Death Ward',level:5,school:'Necromancy',classes:['druid'],desc:'Grants immunity to death effects, energy drain, and ability drain for the duration.'},
+  {name:'Hallow',level:5,school:'Evocation',classes:['druid'],desc:'Fills an area with holy power, warding it and optionally tying a beneficial spell to it.'},
+  {name:'Insect Plague',level:5,school:'Conjuration',classes:['druid'],desc:'Summons swarms of biting insects that damage and obscure vision in the area.'},
+  {name:'Stoneskin',level:5,school:'Abjuration',classes:['druid'],desc:'Ignores a set amount of damage from most physical attacks until the pool is exhausted.'},
+  {name:'Summon Nature\'s Ally V',level:5,school:'Conjuration',classes:['druid'],desc:'Calls a 5th-level nature creature from the summon list to fight for you.'},
   {name:'Teleport',level:5,school:'Conjuration',classes:['sorcerer','wizard'],desc:'Instantly transports you and touched allies to a familiar or studied location.'},
+  {name:'Transmute Mud to Rock',level:5,school:'Transmutation',classes:['druid'],desc:'Transforms an area of mud into solid rock, potentially entrapping creatures within it.'},
   {name:'Transmute Rock to Mud',level:5,school:'Transmutation',classes:['druid','sorcerer','wizard'],desc:'Turns natural rock in the area into thick, mucky mud that mires creatures.'},
+  {name:'Tree Stride',level:5,school:'Conjuration',classes:['druid'],desc:'Step into a tree and instantly travel to another tree of the same species within range.'},
+  {name:'Unhallow',level:5,school:'Evocation',classes:['druid'],desc:'Fills an area with unholy power, warding it and optionally tying a harmful spell to it.'},
+  {name:'Wall of Fire',level:5,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'Creates a wall of flame that damages creatures passing through or standing near it.'},
+  {name:'Wall of Thorns',level:5,school:'Conjuration',classes:['druid'],desc:'Creates a dense, damaging wall of thorny brambles that blocks movement.'},
   {name:'Antilife Shell',level:6,school:'Abjuration',classes:['druid','cleric'],desc:'A mobile field around you prevents living creatures from passing or attacking through it.'},
-  {name:'Fire Seeds',level:6,school:'Conjuration',classes:['druid'],desc:'Creates acorn grenades or berry bombs that explode with fire damage when thrown or triggered.'},
+  {name:'Bear\'s Endurance, Mass',level:6,school:'Transmutation',classes:['druid'],desc:'As Bear\'s Endurance, affecting one creature per level within range.'},
+  {name:'Bull\'s Strength, Mass',level:6,school:'Transmutation',classes:['druid'],desc:'As Bull\'s Strength, affecting one creature per level within range.'},
+  {name:'Cat\'s Grace, Mass',level:6,school:'Transmutation',classes:['druid'],desc:'As Cat\'s Grace, affecting one creature per level within range.'},
   {name:'Chain Lightning',level:6,school:'Evocation',classes:['sorcerer','wizard'],desc:'A bolt strikes a primary target then arcs to secondary targets, all taking electricity damage.'},
+  {name:'Cure Light Wounds, Mass',level:6,school:'Conjuration',classes:['druid'],desc:'As Cure Light Wounds, healing one creature per level within range.'},
   {name:'Disintegrate',level:6,school:'Transmutation',classes:['sorcerer','wizard'],desc:'A ray reduces a creature or object to fine dust if it fails its save against massive damage.'},
-  {name:'Control Weather',level:7,school:'Transmutation',classes:['druid','cleric'],desc:'Shifts the weather in a large area, changing precipitation, wind, and temperature over the following hours.'},
+  {name:'Fire Seeds',level:6,school:'Conjuration',classes:['druid'],desc:'Creates acorn grenades or berry bombs that explode with fire damage when thrown or triggered.'},
+  {name:'Ironwood',level:6,school:'Transmutation',classes:['druid'],desc:'Turns wooden items as hard and strong as steel for the duration.'},
+  {name:'Liveoak',level:6,school:'Transmutation',classes:['druid'],desc:'Animates a tree into a guardian that obeys your commands.'},
+  {name:'Move Earth',level:6,school:'Transmutation',classes:['druid'],desc:'Digs trenches and builds embankments, reshaping earth and unworked stone over a large area.'},
+  {name:'Owl\'s Wisdom, Mass',level:6,school:'Transmutation',classes:['druid'],desc:'As Owl\'s Wisdom, affecting one creature per level within range.'},
+  {name:'Repel Wood',level:6,school:'Transmutation',classes:['druid'],desc:'Pushes back wooden objects and constructs, potentially disarming or moving them.'},
+  {name:'Spellstaff',level:6,school:'Transmutation',classes:['druid'],desc:'Stores a spell within a wooden quarterstaff to be cast again later.'},
+  {name:'Stone Tell',level:6,school:'Divination',classes:['druid'],desc:'Converse with natural or worked stone, learning what it has witnessed.'},
+  {name:'Summon Nature\'s Ally VI',level:6,school:'Conjuration',classes:['druid'],desc:'Calls a 6th-level nature creature from the summon list to fight for you.'},
+  {name:'Transport via Plants',level:6,school:'Conjuration',classes:['druid'],desc:'Travel instantly between two plants of the same kind, as with a network of portals.'},
+  {name:'Wall of Stone',level:6,school:'Conjuration',classes:['druid'],desc:'Creates a solid wall of rock that can be shaped to block passage or form a structure.'},
+  {name:'Animate Plants',level:7,school:'Transmutation',classes:['druid'],desc:'Turns plants into mobile, obedient creatures that fight for you.'},
+  {name:'Changestaff',level:7,school:'Transmutation',classes:['druid'],desc:'Turns a quarterstaff into a Huge, controllable treant for the duration.'},
+  {name:'Control Weather',level:7,school:'Transmutation',classes:['druid','cleric'],desc:'Shifts the weather in a large area, changing precipitation, wind, and temperature over hours.'},
+  {name:'Creeping Doom',level:7,school:'Conjuration',classes:['druid'],desc:'Summons swarms of centipedes that spread out and attack under your direction.'},
+  {name:'Cure Moderate Wounds, Mass',level:7,school:'Conjuration',classes:['druid'],desc:'As Cure Moderate Wounds, healing one creature per level within range.'},
   {name:'Fire Storm',level:7,school:'Evocation',classes:['druid','cleric'],desc:'Deals fire damage across a huge area, burning vegetation and igniting flammable objects.'},
-  {name:'Finger of Death',level:7,school:'Necromancy',classes:['druid','sorcerer','wizard'],desc:'Deals massive negative energy damage, potentially killing the target outright on a failed save.'},
+  {name:'Heal',level:7,school:'Conjuration',classes:['druid'],desc:'Heals the subject of nearly all wounds, and cures many afflictions and conditions.'},
+  {name:'Scrying, Greater',level:7,school:'Divination',classes:['druid'],desc:'As Scrying, but harder to detect and with a longer duration and range.'},
+  {name:'Summon Nature\'s Ally VII',level:7,school:'Conjuration',classes:['druid'],desc:'Calls a 7th-level nature creature from the summon list to fight for you.'},
+  {name:'Sunbeam',level:7,school:'Evocation',classes:['druid'],desc:'A blinding beam of light deals damage and can blind creatures it strikes.'},
+  {name:'Transmute Metal to Wood',level:7,school:'Transmutation',classes:['druid'],desc:'Turns metal objects in a large area into wood, ruining weapons and armor.'},
+  {name:'True Seeing',level:7,school:'Divination',classes:['druid'],desc:'Grants the ability to see things as they actually are, past illusions and disguises.'},
+  {name:'Wind Walk',level:7,school:'Transmutation',classes:['druid'],desc:'Turns you and your allies into gaseous form, allowing extremely fast travel.'},
+  {name:'Animal Shapes',level:8,school:'Transmutation',classes:['druid'],desc:'Turns allies into animal forms of their choice, similar to Wild Shape.'},
+  {name:'Control Plants',level:8,school:'Transmutation',classes:['druid'],desc:'Compels plant creatures within a large area to obey your commands.'},
+  {name:'Cure Serious Wounds, Mass',level:8,school:'Conjuration',classes:['druid'],desc:'As Cure Serious Wounds, healing one creature per level within range.'},
+  {name:'Earthquake',level:8,school:'Evocation',classes:['druid'],desc:'Shakes the ground violently in a large area, damaging structures and knocking creatures down.'},
+  {name:'Finger of Death',level:8,school:'Necromancy',classes:['druid','sorcerer','wizard'],desc:'Deals massive negative energy damage, potentially killing the target outright on a failed save.'},
+  {name:'Repel Metal or Stone',level:8,school:'Abjuration',classes:['druid'],desc:'Pushes back metal and stone objects moving toward you, potentially disarming or halting them.'},
+  {name:'Summon Nature\'s Ally VIII',level:8,school:'Conjuration',classes:['druid'],desc:'Calls an 8th-level nature creature from the summon list to fight for you.'},
   {name:'Sunburst',level:8,school:'Evocation',classes:['druid','sorcerer','wizard'],desc:'A burst of searing radiance deals damage and can blind creatures within a large radius.'},
   {name:'Whirlwind',level:8,school:'Evocation',classes:['druid'],desc:'You become a whirling cyclone able to move over the battlefield, damaging and tossing creatures caught inside.'},
+  {name:'Word of Recall',level:8,school:'Conjuration',classes:['druid'],desc:'Instantly teleports you and allies back to a previously designated sanctuary.'},
+  {name:'Antipathy',level:9,school:'Enchantment',classes:['druid'],desc:'Wards a location or object to repel creatures of a kind you choose.'},
+  {name:'Elemental Swarm',level:9,school:'Conjuration',classes:['druid'],desc:'Summons a group of elementals to fight for you, escalating over several rounds.'},
+  {name:'Foresight',level:9,school:'Divination',classes:['druid','wizard'],desc:'Grants a preternatural sense of danger, a bonus to AC and Reflex, and warning of impending attacks.'},
+  {name:'Regenerate',level:9,school:'Conjuration',classes:['druid'],desc:'Regrows lost body parts and heals the subject of nearly all damage and many afflictions.'},
+  {name:'Shambler',level:9,school:'Conjuration',classes:['druid'],desc:'Summons shambling mounds to fight loyally on your behalf for a long duration.'},
   {name:'Shapechange',level:9,school:'Transmutation',classes:['druid','sorcerer','wizard'],desc:'Assume the form of nearly any creature, changing forms freely as a swift action for the duration.'},
   {name:'Storm of Vengeance',level:9,school:'Conjuration',classes:['druid'],desc:'Summons a massive magical storm that deals escalating damage and effects over several rounds.'},
-  {name:'Foresight',level:9,school:'Divination',classes:['druid','wizard'],desc:'Grants a preternatural sense of danger, granting a bonus to AC and Reflex saves and warning of impending attacks.'},
+  {name:'Summon Nature\'s Ally IX',level:9,school:'Conjuration',classes:['druid'],desc:'Calls a 9th-level nature creature from the summon list to fight for you.'},
+  {name:'Sympathy',level:9,school:'Enchantment',classes:['druid'],desc:'Wards a location or object to attract creatures of a kind you choose.'},
 ];
 
 // Spells-per-day tables by progression type, indexed [casterLevel][spellLevel 0-9]
@@ -1210,6 +1326,7 @@ function renderAll(){
   renderSpellsPrepared();
   renderGear();
   bindInputs(document.getElementById('app'));
+  populateRefClassOptions();
   renderReference();
   recalcAll();
 }
@@ -1721,16 +1838,38 @@ function renderSpellSlotTables(){
 /* =========================================================================
    REFERENCE TAB
    ========================================================================= */
+function populateRefClassOptions(){
+  const sel = document.getElementById('refClass');
+  const classes = new Set();
+  SPELLS.forEach(s=>s.classes.forEach(c=>classes.add(c)));
+  const sorted = Array.from(classes).sort();
+  sel.innerHTML = '<option value="all">All Classes</option>' +
+    sorted.map(c=>`<option value="${c}">${c[0].toUpperCase()+c.slice(1)}</option>`).join('');
+}
+
 function renderReference(){
   const type = document.getElementById('refType').value;
   const q = document.getElementById('refSearch').value.trim().toLowerCase();
+  const classFilter = document.getElementById('refClass').value;
+  document.getElementById('refClass').style.display = type==='spells' ? '' : 'none';
   const box = document.getElementById('refResults');
   box.innerHTML = '';
   let items = [];
   if(type==='spells'){
-    items = SPELLS.filter(s=> !q || s.name.toLowerCase().includes(q) || s.school.toLowerCase().includes(q) || s.classes.join(' ').includes(q))
-      .sort((a,b)=>a.level-b.level || a.name.localeCompare(b.name));
+    items = SPELLS.filter(s=>{
+      const matchesQ = !q || s.name.toLowerCase().includes(q) || s.school.toLowerCase().includes(q) || s.classes.join(' ').includes(q);
+      const matchesClass = classFilter==='all' || s.classes.includes(classFilter);
+      return matchesQ && matchesClass;
+    }).sort((a,b)=>a.level-b.level || a.name.localeCompare(b.name));
+    let lastLevel = null;
     items.forEach(s=>{
+      if(s.level!==lastLevel){
+        lastLevel = s.level;
+        const hdr = document.createElement('div');
+        hdr.style.cssText = 'padding:8px 12px;font-family:Cinzel;font-size:11px;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;background:var(--surface2);position:sticky;top:0;';
+        hdr.textContent = s.level===0 ? 'Level 0 — Orisons/Cantrips' : 'Level '+s.level;
+        box.appendChild(hdr);
+      }
       const div = document.createElement('div');
       div.className='result-item';
       div.innerHTML = `<div class="rname">${escapeHtml(s.name)} <span class="tag">Lvl ${s.level}</span></div>
@@ -1784,6 +1923,7 @@ function renderReference(){
   if(items.length===0) box.innerHTML = '<div class="helptext" style="padding:14px;">No matches. Try a different term.</div>';
 }
 document.getElementById('refType').oninput = renderReference;
+document.getElementById('refClass').oninput = renderReference;
 document.getElementById('refSearch').oninput = renderReference;
 
 /* =========================================================================
