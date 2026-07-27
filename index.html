@@ -944,15 +944,36 @@ let saveTimer = null;
    ========================================================================= */
 let STORAGE_BACKEND = 'none';
 
+let GH_CONFIG_CACHE = null;
+const GH_CONFIG_KEY = 'pf1e:gh:config';
+
+async function loadGhConfigFromStorage(){
+  let raw = null;
+  if(STORAGE_BACKEND==='claude'){
+    try{ const r = await window.storage.get(GH_CONFIG_KEY, false); raw = r ? r.value : null; }catch(e){ raw = null; }
+  }
+  if(raw==null){
+    try{ raw = localStorage.getItem(GH_CONFIG_KEY); }catch(e){ raw = null; }
+  }
+  try{ GH_CONFIG_CACHE = raw ? JSON.parse(raw) : null; }catch(e){ GH_CONFIG_CACHE = null; }
+}
 function getGhConfig(){
-  try{ const raw = localStorage.getItem('pf1e:gh:config'); return raw ? JSON.parse(raw) : null; }
-  catch(e){ return null; }
+  return GH_CONFIG_CACHE;
 }
-function setGhConfig(cfg){
-  try{ localStorage.setItem('pf1e:gh:config', JSON.stringify(cfg)); }catch(e){}
+async function setGhConfig(cfg){
+  GH_CONFIG_CACHE = cfg;
+  const raw = JSON.stringify(cfg);
+  if(STORAGE_BACKEND==='claude'){
+    try{ await window.storage.set(GH_CONFIG_KEY, raw, false); }catch(e){}
+  }
+  try{ localStorage.setItem(GH_CONFIG_KEY, raw); }catch(e){}
 }
-function clearGhConfig(){
-  try{ localStorage.removeItem('pf1e:gh:config'); }catch(e){}
+async function clearGhConfig(){
+  GH_CONFIG_CACHE = null;
+  if(STORAGE_BACKEND==='claude'){
+    try{ await window.storage.delete(GH_CONFIG_KEY, false); }catch(e){}
+  }
+  try{ localStorage.removeItem(GH_CONFIG_KEY); }catch(e){}
 }
 function keyToGhPath(key){
   if(key==='pf1e:index') return 'characters/index.json';
@@ -1203,7 +1224,7 @@ document.getElementById('ghConnectBtn').onclick = async ()=>{
   const branch = document.getElementById('ghBranch').value.trim() || 'main';
   const token = document.getElementById('ghToken').value.trim();
   if(!owner || !repo || !token){ toast('Owner, repo, and token are all required'); return; }
-  setGhConfig({owner, repo, branch, token});
+  await setGhConfig({owner, repo, branch, token});
   document.getElementById('ghStatus').textContent = 'Testing connection…';
   const ok = await ghTestConnection();
   if(!ok){
@@ -1943,6 +1964,7 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
    ========================================================================= */
 (async function init(){
   await detectStorageBackend();
+  await loadGhConfigFromStorage();
   const ghCfg = getGhConfig();
   if(ghCfg) updateSyncPill('synced', `syncing to ${ghCfg.owner}/${ghCfg.repo}`);
   else if(STORAGE_BACKEND==='claude') updateSyncPill('saved');
