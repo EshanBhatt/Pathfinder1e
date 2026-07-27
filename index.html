@@ -231,6 +231,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
     </div>
     <div class="row" style="margin-top:8px;">
       <button class="btn small" id="importCharBtnPicker" style="flex:0 0 auto;">Import from JSON file…</button>
+      <button class="btn small" id="ghSyncBtnPicker" style="flex:0 0 auto;">Connect GitHub Sync…</button>
     </div>
   </div>
 </div>
@@ -1060,6 +1061,7 @@ document.getElementById('importFileInput').onchange = (e)=>{
   e.target.value = '';
 };
 document.getElementById('importCharBtnPicker').onclick = ()=>document.getElementById('importFileInput').click();
+document.getElementById('ghSyncBtnPicker').onclick = openGhOverlay;
 
 /* ---- GitHub Sync panel ---- */
 function refreshGhStatusText(){
@@ -1096,7 +1098,12 @@ document.getElementById('ghConnectBtn').onclick = async ()=>{
   toast('Connected — syncing your characters to GitHub');
   refreshGhStatusText();
   updateSyncPill('synced', `syncing to ${owner}/${repo}`);
-  if(CHAR_ID) queueSave();
+  if(CHAR_ID){
+    queueSave();
+  } else {
+    document.getElementById('ghOverlay').style.display = 'none';
+    showPicker();
+  }
 };
 document.getElementById('ghDisconnectBtn').onclick = ()=>{
   clearGhConfig();
