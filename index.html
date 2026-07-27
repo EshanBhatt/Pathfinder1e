@@ -1418,23 +1418,28 @@ function abilityScore(key){
   return a.base + (a.enh||0) + (a.misc||0) + (a.temp||0);
 }
 function totalLevel(){ return CHAR.classes.reduce((s,c)=>s+(Number(c.level)||0),0); }
+function babForEntry(c){
+  const L = Number(c.level)||0;
+  if(c.babOverride!==undefined && c.babOverride!==null && c.babOverride!=='') return Number(c.babOverride)||0;
+  if(c.bab==='full') return L;
+  if(c.bab==='3/4') return Math.floor(L*0.75);
+  return Math.floor(L*0.5);
+}
 function totalBAB(){
-  return CHAR.classes.reduce((s,c)=>{
-    const L = Number(c.level)||0;
-    if(c.bab==='full') return s + L;
-    if(c.bab==='3/4') return s + Math.floor(L*0.75);
-    return s + Math.floor(L*0.5);
-  },0);
+  return CHAR.classes.reduce((s,c)=> s + babForEntry(c), 0);
 }
 function baseSave(prog, level){
   if(prog==='good') return 2 + Math.floor(level/2);
   return Math.floor(level/3);
 }
+function saveForEntry(c, key){
+  const overrideKey = key+'Override';
+  if(c[overrideKey]!==undefined && c[overrideKey]!==null && c[overrideKey]!=='') return Number(c[overrideKey])||0;
+  const L = Number(c.level)||0;
+  return baseSave(c[key], L);
+}
 function totalBaseSave(kind){
-  return CHAR.classes.reduce((s,c)=>{
-    const L = Number(c.level)||0;
-    return s + baseSave(c[kind], L);
-  },0);
+  return CHAR.classes.reduce((s,c)=> s + saveForEntry(c, kind), 0);
 }
 function sizeMod(){ return SIZES[CHAR.info.size||'medium'].ac; }
 function carryMultiplier(){ return SIZES[CHAR.info.size||'medium'].carry; }
@@ -1500,46 +1505,52 @@ function renderAbilities(){
   });
 }
 
-function babForEntry(c){
-  const L = Number(c.level)||0;
-  if(c.bab==='full') return L;
-  if(c.bab==='3/4') return Math.floor(L*0.75);
-  return Math.floor(L*0.5);
-}
 function renderClasses(){
   const box = document.getElementById('classRows');
   box.innerHTML = '';
   CHAR.classes.forEach((c,i)=>{
     const row = document.createElement('div');
     row.className = 'class-row';
-    const L = Number(c.level)||0;
+    const ov = (v)=> (v===undefined||v===null) ? '' : v;
     row.innerHTML = `
       <div class="field"><label>Class</label><input type="text" value="${escapeHtml(c.name)}" data-i="${i}" data-f="name"></div>
       <div class="field"><label>Level</label><input type="number" value="${c.level}" data-i="${i}" data-f="level"></div>
-      <div class="field"><label>BAB <span class="mono" id="cls-bab-${i}" style="color:var(--gold-bright);">${fmt(babForEntry(c))}</span></label>
-        <select data-i="${i}" data-f="bab">
-          <option value="full" ${c.bab==='full'?'selected':''}>Full</option>
-          <option value="3/4" ${c.bab==='3/4'?'selected':''}>3/4</option>
-          <option value="half" ${c.bab==='half'?'selected':''}>Half</option>
-        </select>
+      <div class="field"><label>BAB</label>
+        <div style="display:flex;gap:4px;">
+          <select data-i="${i}" data-f="bab" style="flex:1;min-width:0;">
+            <option value="full" ${c.bab==='full'?'selected':''}>Full</option>
+            <option value="3/4" ${c.bab==='3/4'?'selected':''}>3/4</option>
+            <option value="half" ${c.bab==='half'?'selected':''}>Half</option>
+          </select>
+          <input type="number" value="${ov(c.babOverride)}" data-i="${i}" data-f="babOverride" id="cls-bab-ov-${i}" placeholder="${fmt(babForEntry(c))}" style="width:52px;" title="Manual override — leave blank for automatic">
+        </div>
       </div>
-      <div class="field"><label>Fort <span class="mono" id="cls-fort-${i}" style="color:var(--gold-bright);">${fmt(baseSave(c.fort,L))}</span></label>
-        <select data-i="${i}" data-f="fort">
-          <option value="good" ${c.fort==='good'?'selected':''}>Good</option>
-          <option value="poor" ${c.fort==='poor'?'selected':''}>Poor</option>
-        </select>
+      <div class="field"><label>Fort</label>
+        <div style="display:flex;gap:4px;">
+          <select data-i="${i}" data-f="fort" style="flex:1;min-width:0;">
+            <option value="good" ${c.fort==='good'?'selected':''}>Good</option>
+            <option value="poor" ${c.fort==='poor'?'selected':''}>Poor</option>
+          </select>
+          <input type="number" value="${ov(c.fortOverride)}" data-i="${i}" data-f="fortOverride" id="cls-fort-ov-${i}" placeholder="${fmt(saveForEntry(c,'fort'))}" style="width:52px;" title="Manual override — leave blank for automatic">
+        </div>
       </div>
-      <div class="field"><label>Ref <span class="mono" id="cls-ref-${i}" style="color:var(--gold-bright);">${fmt(baseSave(c.ref,L))}</span></label>
-        <select data-i="${i}" data-f="ref">
-          <option value="good" ${c.ref==='good'?'selected':''}>Good</option>
-          <option value="poor" ${c.ref==='poor'?'selected':''}>Poor</option>
-        </select>
+      <div class="field"><label>Ref</label>
+        <div style="display:flex;gap:4px;">
+          <select data-i="${i}" data-f="ref" style="flex:1;min-width:0;">
+            <option value="good" ${c.ref==='good'?'selected':''}>Good</option>
+            <option value="poor" ${c.ref==='poor'?'selected':''}>Poor</option>
+          </select>
+          <input type="number" value="${ov(c.refOverride)}" data-i="${i}" data-f="refOverride" id="cls-ref-ov-${i}" placeholder="${fmt(saveForEntry(c,'ref'))}" style="width:52px;" title="Manual override — leave blank for automatic">
+        </div>
       </div>
-      <div class="field"><label>Will <span class="mono" id="cls-will-${i}" style="color:var(--gold-bright);">${fmt(baseSave(c.will,L))}</span></label>
-        <select data-i="${i}" data-f="will">
-          <option value="good" ${c.will==='good'?'selected':''}>Good</option>
-          <option value="poor" ${c.will==='poor'?'selected':''}>Poor</option>
-        </select>
+      <div class="field"><label>Will</label>
+        <div style="display:flex;gap:4px;">
+          <select data-i="${i}" data-f="will" style="flex:1;min-width:0;">
+            <option value="good" ${c.will==='good'?'selected':''}>Good</option>
+            <option value="poor" ${c.will==='poor'?'selected':''}>Poor</option>
+          </select>
+          <input type="number" value="${ov(c.willOverride)}" data-i="${i}" data-f="willOverride" id="cls-will-ov-${i}" placeholder="${fmt(saveForEntry(c,'will'))}" style="width:52px;" title="Manual override — leave blank for automatic">
+        </div>
       </div>
       <button class="iconbtn" data-del="${i}" title="Remove class">✕</button>
     `;
@@ -1550,6 +1561,7 @@ function renderClasses(){
       const i = +el.getAttribute('data-i'), f = el.getAttribute('data-f');
       let v = el.value;
       if(f==='level') v = parseInt(v)||0;
+      if(f.endsWith('Override')) v = (v===''? null : (parseInt(v)||0));
       CHAR.classes[i][f] = v;
       queueSave(); recalcAll();
       if(f==='name') renderCasterClassOptions();
@@ -1924,13 +1936,13 @@ function recalcAll(){
   document.getElementById('ov-hd').textContent = lvl + 'd*';
   document.getElementById('ov-cr').textContent = CHAR.classes[0] ? (CHAR.classes[0].name||'—') : '—';
 
-  // per-class row number badges (BAB/Fort/Ref/Will) — update in place, never rebuild the row
+  // per-class override-input placeholders show the auto-computed value — update in
+  // place without touching the actual (override) value the user may have typed
   CHAR.classes.forEach((c,i)=>{
-    const L = Number(c.level)||0;
-    const babEl = document.getElementById('cls-bab-'+i); if(babEl) babEl.textContent = fmt(babForEntry(c));
-    const fortEl = document.getElementById('cls-fort-'+i); if(fortEl) fortEl.textContent = fmt(baseSave(c.fort,L));
-    const refEl = document.getElementById('cls-ref-'+i); if(refEl) refEl.textContent = fmt(baseSave(c.ref,L));
-    const willEl = document.getElementById('cls-will-'+i); if(willEl) willEl.textContent = fmt(baseSave(c.will,L));
+    const babEl = document.getElementById('cls-bab-ov-'+i); if(babEl) babEl.placeholder = fmt(babForEntry(c));
+    const fortEl = document.getElementById('cls-fort-ov-'+i); if(fortEl) fortEl.placeholder = fmt(saveForEntry(c,'fort'));
+    const refEl = document.getElementById('cls-ref-ov-'+i); if(refEl) refEl.placeholder = fmt(saveForEntry(c,'ref'));
+    const willEl = document.getElementById('cls-will-ov-'+i); if(willEl) willEl.placeholder = fmt(saveForEntry(c,'will'));
   });
 
   const xpPct = CHAR.xp.next>0 ? Math.min(100, (CHAR.xp.current/CHAR.xp.next)*100) : 0;
