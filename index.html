@@ -2005,7 +2005,8 @@ function recalcAll(){
   const gpTotal = (CHAR.currency.pp||0)*10 + (CHAR.currency.gp||0) + (CHAR.currency.sp||0)/10 + (CHAR.currency.cp||0)/100;
   document.getElementById('gp-total').textContent = gpTotal.toFixed(2)+' gp';
 
-  document.getElementById('skillPointsReadout').textContent = '';
+  const totalRanks = Object.values(CHAR.skills).reduce((s,sk)=>s+(sk.ranks||0),0);
+  document.getElementById('skillPointsReadout').textContent = `Total ranks spent: ${totalRanks}`;
 }
 
 function carryCapacity(str){
