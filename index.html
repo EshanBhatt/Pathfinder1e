@@ -1656,14 +1656,56 @@ function renderSkills(){
 }
 function cssSafe(s){ return s.replace(/[^a-z0-9]/gi,'_'); }
 
+function normalizeMatchStr(s){
+  return s.trim().toLowerCase()
+    .replace(/[^a-z0-9\s]/g,'')   // strip punctuation (apostrophes, commas, etc.)
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function stripTrailingS(s){
+  // very small singular/plural normalizer — good enough for "Item"/"Items" style typos
+  return s.replace(/(ies)$/,'y').replace(/(es)$/,'').replace(/(s)$/,'');
+}
+function levenshtein(a,b){
+  const m = a.length, n = b.length;
+  if(m===0) return n;
+  if(n===0) return m;
+  const dp = Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
+  for(let j=0;j<=n;j++) dp[0][j]=j;
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+function fuzzyFindByName(query, items){
+  if(!query) return null;
+  const rawClean = normalizeMatchStr(query);
+  const base = normalizeMatchStr(query.split('(')[0]);
+  for(const candidate of [rawClean, base]){
+    if(!candidate) continue;
+    // 1. exact normalized match
+    let m = items.find(it=>normalizeMatchStr(it.name)===candidate);
+    if(m) return m;
+    // 2. singular/plural-insensitive match (handles "Item" vs "Items" typos)
+    const candNoS = stripTrailingS(candidate);
+    m = items.find(it=>stripTrailingS(normalizeMatchStr(it.name))===candNoS);
+    if(m) return m;
+  }
+  // 3. edit-distance fallback — conservative threshold so it won't false-match unrelated names
+  let best = null, bestDist = Infinity;
+  items.forEach(it=>{
+    const itemName = normalizeMatchStr(it.name);
+    const dist = levenshtein(base, itemName);
+    const threshold = Math.max(1, Math.floor(itemName.length * 0.2));
+    if(dist <= threshold && dist < bestDist){ best = it; bestDist = dist; }
+  });
+  return best;
+}
+
 function findFeatMatch(name){
-  if(!name) return null;
-  const clean = name.trim().toLowerCase();
-  let m = FEATS.find(f=>f.name.toLowerCase()===clean);
-  if(m) return m;
-  const base = clean.split('(')[0].trim();
-  m = FEATS.find(f=>f.name.toLowerCase()===base);
-  return m || null;
+  return fuzzyFindByName(name, FEATS);
 }
 
 function renderFeatsTraits(){
@@ -1764,9 +1806,7 @@ document.getElementById('addCasterBtn').onclick = ()=>{
 };
 
 function findSpellMatch(name){
-  if(!name) return null;
-  const clean = name.trim().toLowerCase();
-  return SPELLS.find(sp=>sp.name.toLowerCase()===clean) || null;
+  return fuzzyFindByName(name, SPELLS);
 }
 
 function renderSpellsPrepared(){
