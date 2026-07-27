@@ -232,6 +232,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
     </div>
     <div class="headline-actions">
       <button class="btn small" id="switchCharBtn">Switch Character</button>
+      <button class="btn small" id="ghSyncBtn">GitHub Sync</button>
       <button class="btn small" id="exportCharBtn">Export JSON</button>
       <button class="btn small" id="importCharBtn">Import JSON</button>
       <input type="file" id="importFileInput" accept="application/json" style="display:none;">
@@ -518,6 +519,23 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
 
 <div class="toast" id="toast"></div>
 
+<div class="picker-overlay" id="ghOverlay" style="display:none;">
+  <div class="picker">
+    <h2 class="display">GitHub Sync</h2>
+    <p>Store character files in your GitHub repo so they follow you across devices. The token you enter is kept only in this browser's local storage — it is never written into a character file or committed to the repo.</p>
+    <div class="field"><label>Repo Owner</label><input type="text" id="ghOwner" placeholder="EshanBhatt"></div>
+    <div class="field"><label>Repo Name</label><input type="text" id="ghRepo" placeholder="Pathfinder1e"></div>
+    <div class="field"><label>Branch</label><input type="text" id="ghBranch" placeholder="main"></div>
+    <div class="field"><label>Personal Access Token (Contents: Read & write)</label><input type="password" id="ghToken" placeholder="github_pat_…"></div>
+    <div class="helptext" id="ghStatus" style="margin-bottom:12px;">Not connected — characters are saving locally only.</div>
+    <div class="row">
+      <button class="btn primary" id="ghConnectBtn">Connect &amp; Sync Now</button>
+      <button class="btn danger" id="ghDisconnectBtn" style="flex:0 0 auto;">Disconnect</button>
+      <button class="btn" id="ghCloseBtn" style="flex:0 0 auto;">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* =========================================================================
    DATA — Core rules tables + curated reference content
@@ -788,10 +806,70 @@ let saveTimer = null;
    STORAGE — uses Claude's persistent storage when available (inside a
    Claude artifact), and transparently falls back to the browser's own
    localStorage when this file is opened standalone (downloaded, hosted
-   on GitHub Pages, etc). Either way character data survives a reload;
-   localStorage just means "on this device/browser" rather than synced.
+   on GitHub Pages, etc). If a GitHub Sync token is configured, that takes
+   priority: every character is a real file in your repo, so it follows
+   you across devices/browsers. Either way character data survives a
+   reload; localStorage just means "on this device/browser" rather than
+   synced.
    ========================================================================= */
 let STORAGE_BACKEND = 'none';
+
+function getGhConfig(){
+  try{ const raw = localStorage.getItem('pf1e:gh:config'); return raw ? JSON.parse(raw) : null; }
+  catch(e){ return null; }
+}
+function setGhConfig(cfg){
+  try{ localStorage.setItem('pf1e:gh:config', JSON.stringify(cfg)); }catch(e){}
+}
+function clearGhConfig(){
+  try{ localStorage.removeItem('pf1e:gh:config'); }catch(e){}
+}
+function keyToGhPath(key){
+  if(key==='pf1e:index') return 'characters/index.json';
+  if(key.startsWith('pf1e:char:')) return 'characters/'+key.slice('pf1e:char:'.length)+'.json';
+  return 'characters/_misc/'+key.replace(/[^a-z0-9]/gi,'_')+'.json';
+}
+async function ghGetFile(path){
+  const cfg = getGhConfig(); if(!cfg) return null;
+  try{
+    const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}?ref=${cfg.branch||'main'}`,
+      {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}});
+    if(res.status===404) return null;
+    if(!res.ok) return null;
+    const data = await res.json();
+    return {content: decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))), sha: data.sha};
+  }catch(e){ return null; }
+}
+async function ghPutFile(path, contentStr, message){
+  const cfg = getGhConfig(); if(!cfg) return false;
+  const existing = await ghGetFile(path);
+  const body = {message, content: btoa(unescape(encodeURIComponent(contentStr))), branch: cfg.branch||'main'};
+  if(existing) body.sha = existing.sha;
+  try{
+    const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`,
+      {method:'PUT', headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json','Content-Type':'application/json'}, body: JSON.stringify(body)});
+    return res.ok;
+  }catch(e){ return false; }
+}
+async function ghDeleteFile(path, message){
+  const cfg = getGhConfig(); if(!cfg) return false;
+  const existing = await ghGetFile(path);
+  if(!existing) return true;
+  try{
+    const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`,
+      {method:'DELETE', headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json','Content-Type':'application/json'},
+       body: JSON.stringify({message, sha: existing.sha, branch: cfg.branch||'main'})});
+    return res.ok;
+  }catch(e){ return false; }
+}
+async function ghTestConnection(){
+  const cfg = getGhConfig(); if(!cfg) return false;
+  try{
+    const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}`,
+      {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}});
+    return res.ok;
+  }catch(e){ return false; }
+}
 
 async function detectStorageBackend(){
   if(typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function'){
@@ -811,6 +889,11 @@ async function detectStorageBackend(){
 }
 
 async function storageGet(key){
+  if(getGhConfig()){
+    const f = await ghGetFile(keyToGhPath(key));
+    if(f) return f.content;
+    // fall through to local cache if GitHub has nothing yet
+  }
   if(STORAGE_BACKEND==='claude'){
     try{ const r = await window.storage.get(key, false); return r ? r.value : null; }catch(e){ return null; }
   }
@@ -820,15 +903,23 @@ async function storageGet(key){
   return null;
 }
 async function storageSet(key, value){
+  let ghOk = true;
+  if(getGhConfig()){
+    ghOk = await ghPutFile(keyToGhPath(key), value, `Update ${key} via PF1e sheet`);
+  }
+  // always keep a local cache too, so the app stays fast/responsive and
+  // works offline between GitHub syncs
   if(STORAGE_BACKEND==='claude'){
-    try{ await window.storage.set(key, value, false); return true; }catch(e){ return false; }
+    try{ await window.storage.set(key, value, false); }catch(e){}
+  } else if(STORAGE_BACKEND==='local'){
+    try{ localStorage.setItem(key, value); }catch(e){}
   }
-  if(STORAGE_BACKEND==='local'){
-    try{ localStorage.setItem(key, value); return true; }catch(e){ return false; }
-  }
-  return false;
+  return ghOk;
 }
 async function storageDelete(key){
+  if(getGhConfig()){
+    await ghDeleteFile(keyToGhPath(key), `Delete ${key} via PF1e sheet`);
+  }
   if(STORAGE_BACKEND==='claude'){
     try{ await window.storage.delete(key, false); }catch(e){}
   } else if(STORAGE_BACKEND==='local'){
@@ -854,16 +945,17 @@ async function persistChar(){
     const list = await listCharacters();
     const entry = list.find(c=>c.id===CHAR_ID);
     if(entry){ entry.name = CHAR.info.name || CHAR.name || 'Unnamed'; entry.updated = Date.now(); }
+    else list.push({id:CHAR_ID, name: CHAR.info.name||'Unnamed', updated:Date.now()});
     await saveIndex(list);
-    document.getElementById('saveStatus').textContent = 'Saved';
+    document.getElementById('saveStatus').textContent = getGhConfig() ? 'Synced to GitHub' : 'Saved';
   } else {
-    document.getElementById('saveStatus').textContent = 'Save failed — use Export to back up manually';
+    document.getElementById('saveStatus').textContent = 'GitHub sync failed — check your token, saved locally only';
   }
 }
 function queueSave(){
-  document.getElementById('saveStatus').textContent = 'Saving…';
+  document.getElementById('saveStatus').textContent = getGhConfig() ? 'Syncing…' : 'Saving…';
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(persistChar, 500);
+  saveTimer = setTimeout(persistChar, getGhConfig() ? 2500 : 500);
 }
 
 async function showPicker(){
@@ -955,6 +1047,52 @@ document.getElementById('importFileInput').onchange = (e)=>{
   e.target.value = '';
 };
 document.getElementById('importCharBtnPicker').onclick = ()=>document.getElementById('importFileInput').click();
+
+/* ---- GitHub Sync panel ---- */
+function refreshGhStatusText(){
+  const cfg = getGhConfig();
+  const el = document.getElementById('ghStatus');
+  if(!cfg){ el.textContent = 'Not connected — characters are saving locally only.'; return; }
+  el.textContent = `Connected to ${cfg.owner}/${cfg.repo} (${cfg.branch||'main'}). Saves become commits in this repo.`;
+}
+function openGhOverlay(){
+  const cfg = getGhConfig() || {};
+  document.getElementById('ghOwner').value = cfg.owner || 'EshanBhatt';
+  document.getElementById('ghRepo').value = cfg.repo || 'Pathfinder1e';
+  document.getElementById('ghBranch').value = cfg.branch || 'main';
+  document.getElementById('ghToken').value = '';
+  refreshGhStatusText();
+  document.getElementById('ghOverlay').style.display = 'flex';
+}
+document.getElementById('ghSyncBtn').onclick = openGhOverlay;
+document.getElementById('ghCloseBtn').onclick = ()=>{ document.getElementById('ghOverlay').style.display='none'; };
+document.getElementById('ghConnectBtn').onclick = async ()=>{
+  const owner = document.getElementById('ghOwner').value.trim();
+  const repo = document.getElementById('ghRepo').value.trim();
+  const branch = document.getElementById('ghBranch').value.trim() || 'main';
+  const token = document.getElementById('ghToken').value.trim();
+  if(!owner || !repo || !token){ toast('Owner, repo, and token are all required'); return; }
+  setGhConfig({owner, repo, branch, token});
+  document.getElementById('ghStatus').textContent = 'Testing connection…';
+  const ok = await ghTestConnection();
+  if(!ok){
+    document.getElementById('ghStatus').textContent = 'Could not reach that repo with this token — check the name and that Contents: Read & write is granted.';
+    clearGhConfig();
+    return;
+  }
+  toast('Connected — syncing your characters to GitHub');
+  refreshGhStatusText();
+  const modeEl = document.getElementById('storageMode');
+  if(modeEl) modeEl.textContent = `· syncing to ${owner}/${repo}`;
+  if(CHAR_ID) queueSave();
+};
+document.getElementById('ghDisconnectBtn').onclick = ()=>{
+  clearGhConfig();
+  refreshGhStatusText();
+  const modeEl = document.getElementById('storageMode');
+  if(modeEl) modeEl.textContent = STORAGE_BACKEND==='local' ? '· saving to this browser only' : '';
+  toast('Disconnected — saving locally only from now on');
+};
 
 /* =========================================================================
    HELPERS
@@ -1634,7 +1772,9 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
   await detectStorageBackend();
   const modeEl = document.getElementById('storageMode');
   if(modeEl){
-    if(STORAGE_BACKEND==='claude') modeEl.textContent = '';
+    const ghCfg = getGhConfig();
+    if(ghCfg) modeEl.textContent = `· syncing to ${ghCfg.owner}/${ghCfg.repo}`;
+    else if(STORAGE_BACKEND==='claude') modeEl.textContent = '';
     else if(STORAGE_BACKEND==='local') modeEl.textContent = '· saving to this browser only';
     else modeEl.textContent = '· auto-save unavailable — use Export often';
   }
