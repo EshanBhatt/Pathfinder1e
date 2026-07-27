@@ -199,6 +199,20 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
   opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;z-index:60;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+.sync-pill{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);font-size:11.5px;color:var(--text-dim);
+  font-weight:600;letter-spacing:.02em;
+}
+.sync-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--text-faint);flex:0 0 auto;}
+.sync-pill.state-synced{border-color:var(--sage-dim);color:var(--sage);}
+.sync-pill.state-synced .dot{background:var(--sage);box-shadow:0 0 6px var(--sage);}
+.sync-pill.state-syncing .dot{background:var(--gold);animation:pulse 1s infinite;}
+.sync-pill.state-syncing{color:var(--gold-bright);}
+.sync-pill.state-local .dot{background:var(--text-faint);}
+.sync-pill.state-failed{border-color:#5c3430;color:var(--danger-bright);}
+.sync-pill.state-failed .dot{background:var(--danger-bright);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 ::-webkit-scrollbar{width:9px;height:9px;}
 ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:6px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -237,8 +251,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
       <button class="btn small" id="importCharBtn">Import JSON</button>
       <input type="file" id="importFileInput" accept="application/json" style="display:none;">
       <button class="btn small danger" id="deleteCharBtn">Delete</button>
-      <span class="helptext" id="saveStatus" style="margin:0;">Saved</span>
-      <span class="helptext" id="storageMode" style="margin:0;"></span>
+      <span class="sync-pill" id="syncPill"><span class="dot" id="syncDot"></span><span id="syncPillText">Saved</span></span>
     </div>
   </div>
 
@@ -947,13 +960,13 @@ async function persistChar(){
     if(entry){ entry.name = CHAR.info.name || CHAR.name || 'Unnamed'; entry.updated = Date.now(); }
     else list.push({id:CHAR_ID, name: CHAR.info.name||'Unnamed', updated:Date.now()});
     await saveIndex(list);
-    document.getElementById('saveStatus').textContent = getGhConfig() ? 'Synced to GitHub' : 'Saved';
+    updateSyncPill(getGhConfig() ? 'synced' : 'saved');
   } else {
-    document.getElementById('saveStatus').textContent = 'GitHub sync failed — check your token, saved locally only';
+    updateSyncPill('failed', getGhConfig() ? 'Sync failed — check token' : 'Save failed');
   }
 }
 function queueSave(){
-  document.getElementById('saveStatus').textContent = getGhConfig() ? 'Syncing…' : 'Saving…';
+  updateSyncPill(getGhConfig() ? 'syncing' : 'saving');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(persistChar, getGhConfig() ? 2500 : 500);
 }
@@ -1082,15 +1095,13 @@ document.getElementById('ghConnectBtn').onclick = async ()=>{
   }
   toast('Connected — syncing your characters to GitHub');
   refreshGhStatusText();
-  const modeEl = document.getElementById('storageMode');
-  if(modeEl) modeEl.textContent = `· syncing to ${owner}/${repo}`;
+  updateSyncPill('synced', `syncing to ${owner}/${repo}`);
   if(CHAR_ID) queueSave();
 };
 document.getElementById('ghDisconnectBtn').onclick = ()=>{
   clearGhConfig();
   refreshGhStatusText();
-  const modeEl = document.getElementById('storageMode');
-  if(modeEl) modeEl.textContent = STORAGE_BACKEND==='local' ? '· saving to this browser only' : '';
+  updateSyncPill(STORAGE_BACKEND==='local' ? 'local' : 'saved');
   toast('Disconnected — saving locally only from now on');
 };
 
@@ -1112,6 +1123,21 @@ function toast(msg){
   t.textContent = msg; t.classList.add('show');
   clearTimeout(toast._t);
   toast._t = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function updateSyncPill(state, label){
+  const pill = document.getElementById('syncPill');
+  const text = document.getElementById('syncPillText');
+  if(!pill) return;
+  pill.className = 'sync-pill state-'+state;
+  const labels = {
+    synced: label || 'Synced to GitHub',
+    syncing: 'Syncing…',
+    saved: 'Saved',
+    saving: 'Saving…',
+    local: 'Saved (this browser only)',
+    failed: label || 'Sync failed'
+  };
+  text.textContent = labels[state] || label || '';
 }
 
 function abilityMod(key){
@@ -1770,14 +1796,11 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
    ========================================================================= */
 (async function init(){
   await detectStorageBackend();
-  const modeEl = document.getElementById('storageMode');
-  if(modeEl){
-    const ghCfg = getGhConfig();
-    if(ghCfg) modeEl.textContent = `· syncing to ${ghCfg.owner}/${ghCfg.repo}`;
-    else if(STORAGE_BACKEND==='claude') modeEl.textContent = '';
-    else if(STORAGE_BACKEND==='local') modeEl.textContent = '· saving to this browser only';
-    else modeEl.textContent = '· auto-save unavailable — use Export often';
-  }
+  const ghCfg = getGhConfig();
+  if(ghCfg) updateSyncPill('synced', `syncing to ${ghCfg.owner}/${ghCfg.repo}`);
+  else if(STORAGE_BACKEND==='claude') updateSyncPill('saved');
+  else if(STORAGE_BACKEND==='local') updateSyncPill('local');
+  else updateSyncPill('failed', 'Auto-save unavailable — use Export');
   showPicker();
 })();
 </script>
