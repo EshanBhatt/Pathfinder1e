@@ -988,8 +988,8 @@ let LAST_GH_ERROR = '';
 async function ghFetchRaw(path){
   const cfg = getGhConfig(); if(!cfg) return null;
   try{
-    const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}?ref=${cfg.branch||'main'}`,
-      {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}});
+    const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}?ref=${cfg.branch||'main'}&_=${Date.now()}`,
+      {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}, cache:'no-store'});
     if(res.status===404) return {missing:true};
     if(!res.ok){
       let detail = '';
@@ -1023,7 +1023,7 @@ async function ghTestConnection(){
   const cfg = getGhConfig(); if(!cfg) return false;
   try{
     const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}`,
-      {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}});
+      {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}, cache:'no-store'});
     if(!res.ok){
       let detail = '';
       try{ detail = (await res.json()).message || ''; }catch(e){}
