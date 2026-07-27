@@ -1649,8 +1649,8 @@ function renderSkills(){
       let v = el.type==='checkbox' ? el.checked : parseFloat(el.value)||0;
       CHAR.skills[name][f] = v;
       queueSave(); recalcAll();
-      if(f==='classSkill' && mode==='class') renderSkills();
-      if(f==='ranks' && mode==='untrained') renderSkills();
+      if(f==='classSkill' && mode==='class'){ renderSkills(); recalcAll(); }
+      if(f==='ranks' && mode==='untrained'){ renderSkills(); recalcAll(); }
     };
   });
 }
@@ -2166,7 +2166,7 @@ function renderReference(){
   }
   if(items.length===0) box.innerHTML = '<div class="helptext" style="padding:14px;">No matches. Try a different term.</div>';
 }
-document.getElementById('skillSortMode').onchange = renderSkills;
+document.getElementById('skillSortMode').onchange = ()=>{ renderSkills(); recalcAll(); };
 document.getElementById('refType').oninput = renderReference;
 document.getElementById('refClass').oninput = renderReference;
 document.getElementById('refSearch').oninput = renderReference;
