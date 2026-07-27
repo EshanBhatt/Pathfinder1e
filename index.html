@@ -923,7 +923,8 @@ function defaultChar(name){
     casters:[],
     spellsPrepared:[],
     currency:{pp:0,gp:0,sp:0,cp:0},
-    gear:[]
+    gear:[],
+    updatedAt: 0
   };
 }
 
@@ -980,16 +981,23 @@ function keyToGhPath(key){
   if(key.startsWith('pf1e:char:')) return 'characters/'+key.slice('pf1e:char:'.length)+'.json';
   return 'characters/_misc/'+key.replace(/[^a-z0-9]/gi,'_')+'.json';
 }
+let LAST_GH_ERROR = '';
+
 async function ghGetFile(path){
   const cfg = getGhConfig(); if(!cfg) return null;
   try{
     const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}?ref=${cfg.branch||'main'}`,
       {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}});
     if(res.status===404) return null;
-    if(!res.ok) return null;
+    if(!res.ok){
+      let detail = '';
+      try{ detail = (await res.json()).message || ''; }catch(e){}
+      LAST_GH_ERROR = `GET ${path} → ${res.status} ${detail}`;
+      return null;
+    }
     const data = await res.json();
     return {content: decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))), sha: data.sha};
-  }catch(e){ return null; }
+  }catch(e){ LAST_GH_ERROR = `GET ${path} → network/CORS error: ${e.message}`; return null; }
 }
 async function ghPutFile(path, contentStr, message){
   const cfg = getGhConfig(); if(!cfg) return false;
@@ -999,8 +1007,15 @@ async function ghPutFile(path, contentStr, message){
   try{
     const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`,
       {method:'PUT', headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json','Content-Type':'application/json'}, body: JSON.stringify(body)});
-    return res.ok;
-  }catch(e){ return false; }
+    if(!res.ok){
+      let detail = '';
+      try{ detail = (await res.json()).message || ''; }catch(e){}
+      LAST_GH_ERROR = `PUT ${path} → ${res.status} ${detail}`;
+      return false;
+    }
+    LAST_GH_ERROR = '';
+    return true;
+  }catch(e){ LAST_GH_ERROR = `PUT ${path} → network/CORS error: ${e.message}`; return false; }
 }
 async function ghDeleteFile(path, message){
   const cfg = getGhConfig(); if(!cfg) return false;
@@ -1018,8 +1033,13 @@ async function ghTestConnection(){
   try{
     const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}`,
       {headers:{Authorization:`Bearer ${cfg.token}`, Accept:'application/vnd.github+json'}});
+    if(!res.ok){
+      let detail = '';
+      try{ detail = (await res.json()).message || ''; }catch(e){}
+      LAST_GH_ERROR = `Connection test → ${res.status} ${detail}`;
+    }
     return res.ok;
-  }catch(e){ return false; }
+  }catch(e){ LAST_GH_ERROR = `Connection test → network/CORS error: ${e.message}`; return false; }
 }
 
 async function detectStorageBackend(){
@@ -1078,6 +1098,16 @@ async function storageDelete(key){
   }
 }
 
+async function localOnlyGet(key){
+  if(STORAGE_BACKEND==='claude'){
+    try{ const r = await window.storage.get(key, false); return r ? r.value : null; }catch(e){ return null; }
+  }
+  if(STORAGE_BACKEND==='local'){
+    try{ return localStorage.getItem(key); }catch(e){ return null; }
+  }
+  return null;
+}
+
 async function listCharacters(){
   const raw = await storageGet('pf1e:index');
   try{ return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
@@ -1086,21 +1116,56 @@ async function saveIndex(list){
   await storageSet('pf1e:index', JSON.stringify(list));
 }
 async function loadChar(id){
-  const raw = await storageGet('pf1e:char:'+id);
-  try{ return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+  const key = 'pf1e:char:'+id;
+  let ghChar = null, localChar = null;
+  if(getGhConfig()){
+    const f = await ghGetFile(keyToGhPath(key));
+    if(f){ try{ ghChar = JSON.parse(f.content); }catch(e){} }
+  }
+  const localRaw = await localOnlyGet(key);
+  if(localRaw){ try{ localChar = JSON.parse(localRaw); }catch(e){} }
+
+  if(ghChar && localChar){
+    // never silently overwrite newer local edits with a stale GitHub copy —
+    // whichever has the more recent updatedAt wins, and if local wins we
+    // immediately try to push it so GitHub catches back up.
+    if((localChar.updatedAt||0) > (ghChar.updatedAt||0)){
+      ghPutFile(keyToGhPath(key), JSON.stringify(localChar), `Recover unsynced edit for ${id}`);
+      return localChar;
+    }
+    return ghChar;
+  }
+  return ghChar || localChar || null;
 }
 async function persistChar(){
   if(!CHAR_ID) return;
-  const ok = await storageSet('pf1e:char:'+CHAR_ID, JSON.stringify(CHAR));
-  if(ok){
-    const list = await listCharacters();
-    const entry = list.find(c=>c.id===CHAR_ID);
-    if(entry){ entry.name = CHAR.info.name || CHAR.name || 'Unnamed'; entry.updated = Date.now(); }
-    else list.push({id:CHAR_ID, name: CHAR.info.name||'Unnamed', updated:Date.now()});
-    await saveIndex(list);
+  CHAR.updatedAt = Date.now();
+  const payload = JSON.stringify(CHAR);
+
+  // always write the local cache first — this is the copy that must never
+  // be lost, regardless of what GitHub does
+  if(STORAGE_BACKEND==='claude'){
+    try{ await window.storage.set('pf1e:char:'+CHAR_ID, payload, false); }catch(e){}
+  } else if(STORAGE_BACKEND==='local'){
+    try{ localStorage.setItem('pf1e:char:'+CHAR_ID, payload); }catch(e){}
+  }
+
+  let ghOk = true;
+  if(getGhConfig()){
+    ghOk = await ghPutFile(keyToGhPath('pf1e:char:'+CHAR_ID), payload, `Update ${CHAR.info.name||'character'} via PF1e sheet`);
+  }
+
+  const list = await listCharacters();
+  const entry = list.find(c=>c.id===CHAR_ID);
+  if(entry){ entry.name = CHAR.info.name || CHAR.name || 'Unnamed'; entry.updated = Date.now(); }
+  else list.push({id:CHAR_ID, name: CHAR.info.name||'Unnamed', updated:Date.now()});
+  await saveIndex(list);
+
+  if(ghOk){
     updateSyncPill(getGhConfig() ? 'synced' : 'saved');
   } else {
-    updateSyncPill('failed', getGhConfig() ? 'Sync failed — check token' : 'Save failed');
+    updateSyncPill('failed', 'Saved locally — GitHub sync failed');
+    console.error('PF1e GitHub sync failed:', LAST_GH_ERROR);
   }
 }
 function queueSave(){
@@ -1144,6 +1209,7 @@ async function createCharacter(name){
   await saveIndex(list);
   const ch = defaultChar(name);
   ch.info.name = name;
+  ch.updatedAt = Date.now();
   await storageSet('pf1e:char:'+id, JSON.stringify(ch));
   openCharacter(id);
 }
@@ -1153,6 +1219,7 @@ async function importCharacterFromFile(file){
     const text = await file.text();
     const data = JSON.parse(text);
     if(!data || !data.info){ toast('That file doesn\'t look like a character export'); return; }
+    data.updatedAt = Date.now();
     const id = 'c'+Date.now();
     const list = await listCharacters();
     list.push({id, name: data.info.name || data.name || 'Imported Character', updated:Date.now()});
@@ -1228,7 +1295,7 @@ document.getElementById('ghConnectBtn').onclick = async ()=>{
   document.getElementById('ghStatus').textContent = 'Testing connection…';
   const ok = await ghTestConnection();
   if(!ok){
-    document.getElementById('ghStatus').textContent = 'Could not reach that repo with this token — check the name and that Contents: Read & write is granted.';
+    document.getElementById('ghStatus').textContent = 'Connection failed: ' + (LAST_GH_ERROR || 'unknown error') + ' — check the repo name and that Contents: Read & write is granted.';
     clearGhConfig();
     return;
   }
