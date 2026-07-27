@@ -71,6 +71,8 @@ button, select, input, textarea{font-family:inherit;color:inherit;}
   transition:border-color .15s, background .15s;
 }
 .btn:hover{border-color:var(--gold);background:var(--surface3);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn:disabled:hover{border-color:var(--border);background:var(--surface2);}
 .btn.primary{background:linear-gradient(180deg,#d3ae6a,var(--gold));color:#211a0d;border-color:var(--gold);font-weight:700;}
 .btn.primary:hover{background:linear-gradient(180deg,var(--gold-bright),#d3ae6a);}
 .btn.danger{border-color:#5c3430;}
@@ -210,6 +212,8 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
 .sync-pill.state-syncing .dot{background:var(--gold);animation:pulse 1s infinite;}
 .sync-pill.state-syncing{color:var(--gold-bright);}
 .sync-pill.state-local .dot{background:var(--text-faint);}
+.sync-pill.state-unconnected .dot{background:var(--text-faint);}
+.sync-pill.state-unconnected{border-color:var(--gold);color:var(--gold-bright);}
 .sync-pill.state-failed{border-color:#5c3430;color:var(--danger-bright);}
 .sync-pill.state-failed .dot{background:var(--danger-bright);}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
@@ -1059,130 +1063,88 @@ async function detectStorageBackend(){
   }
 }
 
-async function storageGet(key){
-  if(getGhConfig()){
-    const f = await ghGetFile(keyToGhPath(key));
-    if(f) return f.content;
-    // fall through to local cache if GitHub has nothing yet
+let PENDING_SYNC = false;
+window.addEventListener('beforeunload', (e)=>{
+  if(PENDING_SYNC){
+    e.preventDefault();
+    e.returnValue = 'A save to GitHub hasn\'t finished yet. Leave anyway?';
+    return e.returnValue;
   }
-  if(STORAGE_BACKEND==='claude'){
-    try{ const r = await window.storage.get(key, false); return r ? r.value : null; }catch(e){ return null; }
-  }
-  if(STORAGE_BACKEND==='local'){
-    try{ return localStorage.getItem(key); }catch(e){ return null; }
-  }
-  return null;
-}
-async function storageSet(key, value){
-  let ghOk = true;
-  if(getGhConfig()){
-    ghOk = await ghPutFile(keyToGhPath(key), value, `Update ${key} via PF1e sheet`);
-  }
-  // always keep a local cache too, so the app stays fast/responsive and
-  // works offline between GitHub syncs
-  if(STORAGE_BACKEND==='claude'){
-    try{ await window.storage.set(key, value, false); }catch(e){}
-  } else if(STORAGE_BACKEND==='local'){
-    try{ localStorage.setItem(key, value); }catch(e){}
-  }
-  return ghOk;
-}
-async function storageDelete(key){
-  if(getGhConfig()){
-    await ghDeleteFile(keyToGhPath(key), `Delete ${key} via PF1e sheet`);
-  }
-  if(STORAGE_BACKEND==='claude'){
-    try{ await window.storage.delete(key, false); }catch(e){}
-  } else if(STORAGE_BACKEND==='local'){
-    try{ localStorage.removeItem(key); }catch(e){}
-  }
-}
-
-async function localOnlyGet(key){
-  if(STORAGE_BACKEND==='claude'){
-    try{ const r = await window.storage.get(key, false); return r ? r.value : null; }catch(e){ return null; }
-  }
-  if(STORAGE_BACKEND==='local'){
-    try{ return localStorage.getItem(key); }catch(e){ return null; }
-  }
-  return null;
-}
+});
 
 async function listCharacters(){
-  const raw = await storageGet('pf1e:index');
-  try{ return raw ? JSON.parse(raw) : []; }catch(e){ return []; }
+  if(!getGhConfig()) return [];
+  const f = await ghGetFile(keyToGhPath('pf1e:index'));
+  if(!f) return [];
+  try{ return JSON.parse(f.content); }catch(e){ return []; }
 }
 async function saveIndex(list){
-  await storageSet('pf1e:index', JSON.stringify(list));
+  if(!getGhConfig()) return false;
+  return await ghPutFile(keyToGhPath('pf1e:index'), JSON.stringify(list), 'Update character index');
 }
 async function loadChar(id){
-  const key = 'pf1e:char:'+id;
-  let ghChar = null, localChar = null;
-  if(getGhConfig()){
-    const f = await ghGetFile(keyToGhPath(key));
-    if(f){ try{ ghChar = JSON.parse(f.content); }catch(e){} }
-  }
-  const localRaw = await localOnlyGet(key);
-  if(localRaw){ try{ localChar = JSON.parse(localRaw); }catch(e){} }
-
-  if(ghChar && localChar){
-    // never silently overwrite newer local edits with a stale GitHub copy —
-    // whichever has the more recent updatedAt wins, and if local wins we
-    // immediately try to push it so GitHub catches back up.
-    if((localChar.updatedAt||0) > (ghChar.updatedAt||0)){
-      ghPutFile(keyToGhPath(key), JSON.stringify(localChar), `Recover unsynced edit for ${id}`);
-      return localChar;
-    }
-    return ghChar;
-  }
-  return ghChar || localChar || null;
+  if(!getGhConfig()) return null;
+  const f = await ghGetFile(keyToGhPath('pf1e:char:'+id));
+  if(!f) return null;
+  try{ return JSON.parse(f.content); }catch(e){ return null; }
 }
-async function persistChar(){
-  if(!CHAR_ID) return;
+
+let RETRY_TIMER = null;
+async function persistChar(attempt){
+  attempt = attempt || 1;
+  if(!CHAR_ID || !getGhConfig()) return;
   CHAR.updatedAt = Date.now();
   const payload = JSON.stringify(CHAR);
+  PENDING_SYNC = true;
+  updateSyncPill('syncing');
 
-  // always write the local cache first — this is the copy that must never
-  // be lost, regardless of what GitHub does
-  if(STORAGE_BACKEND==='claude'){
-    try{ await window.storage.set('pf1e:char:'+CHAR_ID, payload, false); }catch(e){}
-  } else if(STORAGE_BACKEND==='local'){
-    try{ localStorage.setItem('pf1e:char:'+CHAR_ID, payload); }catch(e){}
-  }
-
-  let ghOk = true;
-  if(getGhConfig()){
-    ghOk = await ghPutFile(keyToGhPath('pf1e:char:'+CHAR_ID), payload, `Update ${CHAR.info.name||'character'} via PF1e sheet`);
-  }
-
-  const list = await listCharacters();
-  const entry = list.find(c=>c.id===CHAR_ID);
-  if(entry){ entry.name = CHAR.info.name || CHAR.name || 'Unnamed'; entry.updated = Date.now(); }
-  else list.push({id:CHAR_ID, name: CHAR.info.name||'Unnamed', updated:Date.now()});
-  await saveIndex(list);
+  const ghOk = await ghPutFile(keyToGhPath('pf1e:char:'+CHAR_ID), payload, `Update ${CHAR.info.name||'character'} via PF1e sheet`);
 
   if(ghOk){
-    updateSyncPill(getGhConfig() ? 'synced' : 'saved');
+    const list = await listCharacters();
+    const entry = list.find(c=>c.id===CHAR_ID);
+    if(entry){ entry.name = CHAR.info.name || CHAR.name || 'Unnamed'; entry.updated = Date.now(); }
+    else list.push({id:CHAR_ID, name: CHAR.info.name||'Unnamed', updated:Date.now()});
+    await saveIndex(list);
+    PENDING_SYNC = false;
+    clearTimeout(RETRY_TIMER);
+    updateSyncPill('synced');
   } else {
-    updateSyncPill('failed', 'Saved locally — GitHub sync failed');
-    console.error('PF1e GitHub sync failed:', LAST_GH_ERROR);
+    console.error('PF1e GitHub sync failed (attempt '+attempt+'):', LAST_GH_ERROR);
+    updateSyncPill('failed', `Retrying sync… (${LAST_GH_ERROR || 'unknown error'})`);
+    const delay = Math.min(30000, 2000 * Math.pow(2, attempt-1)); // backoff, capped at 30s
+    clearTimeout(RETRY_TIMER);
+    RETRY_TIMER = setTimeout(()=>persistChar(attempt+1), delay);
   }
 }
 function queueSave(){
-  updateSyncPill(getGhConfig() ? 'syncing' : 'saving');
+  if(!getGhConfig()){
+    updateSyncPill('unconnected');
+    return;
+  }
+  updateSyncPill('syncing');
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(persistChar, getGhConfig() ? 2500 : 500);
+  clearTimeout(RETRY_TIMER);
+  saveTimer = setTimeout(()=>persistChar(1), 2500);
 }
 
 async function showPicker(){
   const overlay = document.getElementById('pickerOverlay');
   const app = document.getElementById('app');
   overlay.style.display='flex'; app.style.display='none';
-  const list = await listCharacters();
+  const connected = !!getGhConfig();
+  document.getElementById('newCharName').disabled = !connected;
+  document.getElementById('newCharBtn').disabled = !connected;
+  document.getElementById('importCharBtnPicker').disabled = !connected;
   const box = document.getElementById('charList');
+  if(!connected){
+    box.innerHTML = '<div class="helptext">Connect GitHub Sync below to load or create characters — everything in this app lives in your repo, nothing is stored separately.</div>';
+    return;
+  }
+  const list = await listCharacters();
   box.innerHTML = '';
   if(list.length===0){
-    box.innerHTML = '<div class="helptext">No characters saved yet — create your first below.</div>';
+    box.innerHTML = '<div class="helptext">No characters yet — create your first below.</div>';
   }
   list.sort((a,b)=>(b.updated||0)-(a.updated||0)).forEach(c=>{
     const div = document.createElement('div');
@@ -1203,6 +1165,7 @@ async function openCharacter(id){
 }
 
 async function createCharacter(name){
+  if(!getGhConfig()){ toast('Connect GitHub Sync first'); return; }
   const id = 'c'+Date.now();
   const list = await listCharacters();
   list.push({id, name, updated:Date.now()});
@@ -1210,11 +1173,13 @@ async function createCharacter(name){
   const ch = defaultChar(name);
   ch.info.name = name;
   ch.updatedAt = Date.now();
-  await storageSet('pf1e:char:'+id, JSON.stringify(ch));
+  const ok = await ghPutFile(keyToGhPath('pf1e:char:'+id), JSON.stringify(ch), `Create character ${name}`);
+  if(!ok){ toast('Could not create character on GitHub: '+LAST_GH_ERROR); return; }
   openCharacter(id);
 }
 
 async function importCharacterFromFile(file){
+  if(!getGhConfig()){ toast('Connect GitHub Sync first'); return; }
   try{
     const text = await file.text();
     const data = JSON.parse(text);
@@ -1224,7 +1189,8 @@ async function importCharacterFromFile(file){
     const list = await listCharacters();
     list.push({id, name: data.info.name || data.name || 'Imported Character', updated:Date.now()});
     await saveIndex(list);
-    await storageSet('pf1e:char:'+id, JSON.stringify(data));
+    const ok = await ghPutFile(keyToGhPath('pf1e:char:'+id), JSON.stringify(data), 'Import character');
+    if(!ok){ toast('Import failed on GitHub: '+LAST_GH_ERROR); return; }
     openCharacter(id);
     toast('Character imported');
   }catch(e){
@@ -1250,11 +1216,12 @@ document.getElementById('newCharBtn').onclick = ()=>{
 };
 document.getElementById('switchCharBtn').onclick = showPicker;
 document.getElementById('deleteCharBtn').onclick = async ()=>{
+  if(!getGhConfig()){ toast('Connect GitHub Sync first'); return; }
   if(!confirm('Delete this character permanently? This cannot be undone.')) return;
   const list = await listCharacters();
   const filtered = list.filter(c=>c.id!==CHAR_ID);
   await saveIndex(filtered);
-  await storageDelete('pf1e:char:'+CHAR_ID);
+  await ghDeleteFile(keyToGhPath('pf1e:char:'+CHAR_ID), `Delete ${CHAR.info.name||'character'}`);
   showPicker();
 };
 document.getElementById('exportCharBtn').onclick = exportCurrentCharacter;
@@ -1271,7 +1238,7 @@ document.getElementById('ghSyncBtnPicker').onclick = openGhOverlay;
 function refreshGhStatusText(){
   const cfg = getGhConfig();
   const el = document.getElementById('ghStatus');
-  if(!cfg){ el.textContent = 'Not connected — characters are saving locally only.'; return; }
+  if(!cfg){ el.textContent = 'Not connected — nothing can be created, loaded, or saved until you connect.'; return; }
   el.textContent = `Connected to ${cfg.owner}/${cfg.repo} (${cfg.branch||'main'}). Saves become commits in this repo.`;
 }
 function openGhOverlay(){
@@ -1309,11 +1276,13 @@ document.getElementById('ghConnectBtn').onclick = async ()=>{
     showPicker();
   }
 };
-document.getElementById('ghDisconnectBtn').onclick = ()=>{
-  clearGhConfig();
+document.getElementById('ghDisconnectBtn').onclick = async ()=>{
+  await clearGhConfig();
   refreshGhStatusText();
-  updateSyncPill(STORAGE_BACKEND==='local' ? 'local' : 'saved');
-  toast('Disconnected — saving locally only from now on');
+  updateSyncPill('unconnected');
+  toast('Disconnected — nothing will save until you reconnect');
+  document.getElementById('ghOverlay').style.display = 'none';
+  showPicker();
 };
 
 /* =========================================================================
@@ -1346,6 +1315,7 @@ function updateSyncPill(state, label){
     saved: 'Saved',
     saving: 'Saving…',
     local: 'Saved (this browser only)',
+    unconnected: 'Not connected — connect GitHub Sync',
     failed: label || 'Sync failed'
   };
   text.textContent = labels[state] || label || '';
@@ -2034,9 +2004,7 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
   await loadGhConfigFromStorage();
   const ghCfg = getGhConfig();
   if(ghCfg) updateSyncPill('synced', `syncing to ${ghCfg.owner}/${ghCfg.repo}`);
-  else if(STORAGE_BACKEND==='claude') updateSyncPill('saved');
-  else if(STORAGE_BACKEND==='local') updateSyncPill('local');
-  else updateSyncPill('failed', 'Auto-save unavailable — use Export');
+  else updateSyncPill('unconnected');
   showPicker();
 })();
 </script>
