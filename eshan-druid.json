@@ -1,0 +1,68 @@
+{
+  "name": "Half Orc Reincarnated Druid",
+  "info": {
+    "name": "", "player": "", "race": "Half-Orc (Reincarnated Druid)", "size": "medium",
+    "gender": "", "age": "", "height": "", "weight": "", "hair": "", "eyes": "",
+    "alignment": "", "deity": "", "background": "",
+    "languages": "Common, Owl (speak with animal - owl)"
+  },
+  "classes": [
+    {"name": "Reincarnated Druid", "level": 9, "bab": "3/4", "fort": "good", "ref": "poor", "will": "good"}
+  ],
+  "abilities": {
+    "str": {"base": 10, "enh": 0, "misc": 0, "temp": 0},
+    "dex": {"base": 12, "enh": 0, "misc": 0, "temp": 0},
+    "con": {"base": 12, "enh": 0, "misc": 0, "temp": 0},
+    "int": {"base": 14, "enh": 0, "misc": 0, "temp": 0},
+    "wis": {"base": 19, "enh": 0, "misc": 0, "temp": 0},
+    "cha": {"base": 8, "enh": 0, "misc": 0, "temp": 0}
+  },
+  "hp": {"max": 51, "current": 50, "nonlethal": 0, "temp": 0},
+  "speed": {"land": 30, "fly": 0, "swim": 0, "climb": 0},
+  "xp": {"current": 39832, "next": 55000},
+  "ac": {"armor": 0, "shield": 0, "natural": 1, "deflect": 0, "dodge": 0, "temp": 0, "maxDex": 99, "acp": 0},
+  "saves": {"fort": {"misc": 0, "temp": 0}, "ref": {"misc": 1, "temp": 0}, "will": {"misc": 1, "temp": 0}},
+  "combat": {"cmbMisc": 0, "cmdMisc": 0, "initMisc": 1},
+  "weapons": [
+    {"name": "Quarterstaff", "atkMod": 0, "damage": "1d6/1d6+0", "crit": "x2", "ranged": false, "type": "B"}
+  ],
+  "skills": {
+    "Climb": {"ranks": 3, "classSkill": true, "misc": 0},
+    "Craft": {"ranks": 1, "classSkill": true, "misc": 0},
+    "Fly": {"ranks": 2, "classSkill": true, "misc": 0},
+    "Handle Animal": {"ranks": 2, "classSkill": true, "misc": 0},
+    "Heal": {"ranks": 4, "classSkill": true, "misc": 0},
+    "Knowledge (nature)": {"ranks": 9, "classSkill": true, "misc": 0},
+    "Knowledge (geography)": {"ranks": 5, "classSkill": true, "misc": 0},
+    "Perception": {"ranks": 9, "classSkill": true, "misc": 0},
+    "Ride": {"ranks": 7, "classSkill": true, "misc": 0},
+    "Sense Motive": {"ranks": 3, "classSkill": true, "misc": 0},
+    "Spellcraft": {"ranks": 2, "classSkill": true, "misc": 0},
+    "Survival": {"ranks": 9, "classSkill": true, "misc": 0},
+    "Swim": {"ranks": 8, "classSkill": true, "misc": 0}
+  },
+  "feats": [
+    "Toughness (+6 HP)",
+    "Natural Spell (cast in Wild Shape)",
+    "Craft Wondrous Items",
+    "Skill Focus (Spellcraft)",
+    "Spell Focus (Evocation)"
+  ],
+  "traits": [
+    "Shaman Enhancement (+2 Spellcraft, +2 animal companion ability checks)",
+    "Sacred Tattoo (+1 all saving throws)",
+    "Dark Vision (see in the dark)"
+  ],
+  "notes": {
+    "features": "CLASS FEATURES: Nature Bond (Animal Companion); Nature Sense (+2 Knowledge Nature and Survival); Wild Empathy (improve attitude of an animal); Mysterious Stranger (+1/2 level to DC Sense Motive/Diplomacy/Knowledge checks); Trackless Step (move normal speed through undergrowth); Resist Death's Touch (+4 saves vs death effects/energy drain/stabilization checks); Wild Shape (turn into animal, currently 2/day); Many Lives (Reincarnate 9x); Cheat Death (reroll death effect/energy drain/necromancy effect at 9th); A Thousand Faces (13th, change appearance at will); Tongue of Sun/Moon (15th, speak with any living creature)."
+  },
+  "casters": [
+    {"className": "Reincarnated Druid", "ability": "wis", "prog": "full", "clOverride": null}
+  ],
+  "spellsPrepared": [],
+  "currency": {"pp": 0, "gp": 0, "sp": 0, "cp": 0},
+  "gear": [
+    {"name": "Cure Moderate Wounds (potion/scroll)", "qty": 1, "weight": 0, "notes": ""},
+    {"name": "Water Breathing (potion/scroll)", "qty": 1, "weight": 0, "notes": ""}
+  ]
+}
