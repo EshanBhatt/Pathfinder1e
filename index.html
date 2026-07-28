@@ -196,7 +196,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
 .level-filter-btn.active{background:linear-gradient(180deg,#d3ae6a,var(--gold));color:#211a0d;border-color:var(--gold);}
 .result-item.open .rdesc{display:block;}
 
-.class-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px;}
+.class-row{display:grid;grid-template-columns:1.6fr .8fr .8fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px;}
 @media(max-width:860px){.class-row{grid-template-columns:1fr 1fr;}}
 
 .load-bar{height:8px;border-radius:6px;background:var(--surface3);overflow:hidden;margin-top:6px;}
@@ -969,7 +969,7 @@ function defaultChar(name){
   return {
     name: name || 'New Character',
     info:{name:name||'', player:'', race:'', size:'medium', gender:'', age:'', height:'', weight:'', hair:'', eyes:'', alignment:'', deity:'', background:'', languages:''},
-    classes:[{name:'',level:1,bab:'full',fort:'good',ref:'poor',will:'poor'}],
+    classes:[{name:'',level:1,bab:'full',fort:'good',ref:'poor',will:'poor',hitDie:'d8'}],
     abilities:{str:{base:10,enh:0,misc:0,temp:0},dex:{base:10,enh:0,misc:0,temp:0},con:{base:10,enh:0,misc:0,temp:0},int:{base:10,enh:0,misc:0,temp:0},wis:{base:10,enh:0,misc:0,temp:0},cha:{base:10,enh:0,misc:0,temp:0}},
     hp:{max:0,current:0,nonlethal:0,temp:0},
     speed:{land:30,fly:0,swim:0,climb:0},
@@ -1533,6 +1533,14 @@ function renderClasses(){
     row.innerHTML = `
       <div class="field"><label>Class</label><input type="text" value="${escapeHtml(c.name)}" data-i="${i}" data-f="name"></div>
       <div class="field"><label>Level</label><input type="number" value="${c.level}" data-i="${i}" data-f="level"></div>
+      <div class="field"><label>Hit Die</label>
+        <select data-i="${i}" data-f="hitDie">
+          <option value="d6" ${(c.hitDie||'d8')==='d6'?'selected':''}>d6</option>
+          <option value="d8" ${(c.hitDie||'d8')==='d8'?'selected':''}>d8</option>
+          <option value="d10" ${(c.hitDie||'d8')==='d10'?'selected':''}>d10</option>
+          <option value="d12" ${(c.hitDie||'d8')==='d12'?'selected':''}>d12</option>
+        </select>
+      </div>
       <div class="field"><label>BAB</label>
         <div style="display:flex;gap:4px;">
           <select data-i="${i}" data-f="bab" style="flex:1;min-width:0;">
@@ -1593,7 +1601,7 @@ function renderClasses(){
   });
 }
 document.getElementById('addClassBtn').onclick = ()=>{
-  CHAR.classes.push({name:'',level:1,bab:'full',fort:'poor',will:'poor',ref:'poor'});
+  CHAR.classes.push({name:'',level:1,bab:'full',fort:'poor',will:'poor',ref:'poor',hitDie:'d8'});
   renderClasses(); queueSave(); recalcAll();
 };
 
@@ -1989,7 +1997,8 @@ function recalcAll(){
   const lvl = totalLevel();
   document.getElementById('ov-level').textContent = lvl;
   document.getElementById('ov-bab').textContent = fmt(bab);
-  document.getElementById('ov-hd').textContent = lvl + 'd*';
+  const hdParts = CHAR.classes.filter(c=>Number(c.level)>0).map(c=> `${Number(c.level)}${c.hitDie||'d8'}`);
+  document.getElementById('ov-hd').textContent = hdParts.length ? hdParts.join(' + ') : '0';
   document.getElementById('ov-cr').textContent = CHAR.classes[0] ? (CHAR.classes[0].name||'—') : '—';
 
   // per-class override-input placeholders show the auto-computed value — update in
