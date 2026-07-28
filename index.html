@@ -194,6 +194,21 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
 .level-filter-btn.all-btn{width:auto;padding:0 12px;font-family:'Inter';font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
 .level-filter-btn:hover{border-color:var(--gold);color:var(--text);}
 .level-filter-btn.active{background:linear-gradient(180deg,#d3ae6a,var(--gold));color:#211a0d;border-color:var(--gold);}
+.sticky-statbar{
+  position:sticky;top:0;z-index:20;display:flex;gap:0;
+  background:linear-gradient(180deg,#1b2029ee,#1b2029f5);backdrop-filter:blur(6px);
+  border:1px solid var(--border);border-radius:10px;padding:8px 4px;margin-bottom:18px;
+  box-shadow:0 4px 16px rgba(0,0,0,.35);overflow-x:auto;
+}
+.ssb-item{
+  flex:1;min-width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:4px 6px;border-right:1px solid var(--border-soft);
+}
+.ssb-item:last-child{border-right:none;}
+.ssb-item.hp .ssb-v{color:var(--sage);}
+.ssb-v{font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:var(--gold-bright);}
+.ssb-l{font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;margin-top:1px;}
+@media(max-width:700px){.ssb-item{min-width:52px;}.ssb-v{font-size:12px;}}
 .result-item.open .rdesc{display:block;}
 
 .class-row{display:grid;grid-template-columns:1.6fr .8fr .8fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px;}
@@ -292,6 +307,18 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
     <button class="tab" data-tab="gear">Gear &amp; Wealth</button>
     <button class="tab" data-tab="reference">Reference</button>
     <button class="tab" data-tab="notes">Notes</button>
+  </div>
+
+  <div class="sticky-statbar" id="stickyStatbar">
+    <div class="ssb-item"><span class="ssb-v" id="ssb-ac">10</span><span class="ssb-l">AC</span></div>
+    <div class="ssb-item"><span class="ssb-v" id="ssb-touch">10</span><span class="ssb-l">Touch</span></div>
+    <div class="ssb-item"><span class="ssb-v" id="ssb-ff">10</span><span class="ssb-l">Flat-Foot</span></div>
+    <div class="ssb-item hp"><span class="ssb-v" id="ssb-hp">0/0</span><span class="ssb-l">HP</span></div>
+    <div class="ssb-item"><span class="ssb-v" id="ssb-fort">+0</span><span class="ssb-l">Fort</span></div>
+    <div class="ssb-item"><span class="ssb-v" id="ssb-ref">+0</span><span class="ssb-l">Ref</span></div>
+    <div class="ssb-item"><span class="ssb-v" id="ssb-will">+0</span><span class="ssb-l">Will</span></div>
+    <div class="ssb-item"><span class="ssb-v" id="ssb-init">+0</span><span class="ssb-l">Init</span></div>
+    <div class="ssb-item"><span class="ssb-v" id="ssb-cmd">10</span><span class="ssb-l">CMD</span></div>
   </div>
 
   <!-- ============ OVERVIEW ============ -->
@@ -480,8 +507,11 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
       <div class="card">
         <h3>Feats</h3>
         <div id="featsList"></div>
-        <button class="btn small" id="addFeatBtn">+ Add Feat</button>
-        <div class="helptext">Matching a name from the bundled Core Rulebook feat list (Reference tab) auto-shows its prerequisites and effect below it. For anything not in that list, write your own — or search the Reference tab for feats you can add directly.</div>
+        <div class="row" style="max-width:320px;">
+          <button class="btn small" id="addFeatBtn">+ Add Blank</button>
+          <button class="btn small primary" id="browseFeatBtn">Browse Feats…</button>
+        </div>
+        <div class="helptext">Matching a name from the bundled Core Rulebook feat list auto-shows its prerequisites and effect below it. "Browse Feats" searches that same list and adds one with a click. For anything not in the list, "Add Blank" and write your own.</div>
       </div>
       <div class="card">
         <h3>Traits</h3>
@@ -609,6 +639,18 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
       <button class="btn primary" id="ghConnectBtn">Connect &amp; Sync Now</button>
       <button class="btn danger" id="ghDisconnectBtn" style="flex:0 0 auto;">Disconnect</button>
       <button class="btn" id="ghCloseBtn" style="flex:0 0 auto;">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="picker-overlay" id="featPickerOverlay" style="display:none;">
+  <div class="picker" style="max-width:640px;">
+    <h2 class="display">Browse Feats</h2>
+    <p>Bundled Core Rulebook feats — click one to add it to your sheet.</p>
+    <input type="text" id="featPickerSearch" placeholder="Search by name or type…" style="margin-bottom:12px;">
+    <div class="results" id="featPickerResults" style="max-height:400px;"></div>
+    <div class="row" style="margin-top:14px;">
+      <button class="btn" id="featPickerCloseBtn" style="flex:0 0 auto;">Done</button>
     </div>
   </div>
 </div>
@@ -1787,6 +1829,41 @@ function renderFeatsTraits(){
   });
 }
 document.getElementById('addFeatBtn').onclick = ()=>{ CHAR.feats.push('New Feat'); renderFeatsTraits(); queueSave(); };
+
+function renderFeatPicker(){
+  const q = document.getElementById('featPickerSearch').value.trim().toLowerCase();
+  const box = document.getElementById('featPickerResults');
+  const items = FEATS.filter(f=> !q || f.name.toLowerCase().includes(q) || f.type.toLowerCase().includes(q));
+  box.innerHTML = '';
+  if(items.length===0){
+    box.innerHTML = '<div class="helptext" style="padding:14px;">No matches.</div>';
+    return;
+  }
+  items.forEach(f=>{
+    const div = document.createElement('div');
+    div.className = 'result-item';
+    div.innerHTML = `<div class="rname">${escapeHtml(f.name)} <span class="tag">${escapeHtml(f.type)}</span></div>
+      <div class="rmeta">Prereq: ${escapeHtml(f.prereq)}</div>
+      <div class="rdesc" style="display:block;">${escapeHtml(f.desc)}</div>`;
+    div.style.cursor = 'pointer';
+    div.onclick = ()=>{
+      CHAR.feats.push(f.name);
+      renderFeatsTraits();
+      queueSave();
+      toast(f.name+' added');
+    };
+    box.appendChild(div);
+  });
+}
+document.getElementById('browseFeatBtn').onclick = ()=>{
+  document.getElementById('featPickerSearch').value = '';
+  renderFeatPicker();
+  document.getElementById('featPickerOverlay').style.display = 'flex';
+};
+document.getElementById('featPickerSearch').oninput = renderFeatPicker;
+document.getElementById('featPickerCloseBtn').onclick = ()=>{
+  document.getElementById('featPickerOverlay').style.display = 'none';
+};
 document.getElementById('addTraitBtn').onclick = ()=>{ CHAR.traits.push('New Trait'); renderFeatsTraits(); queueSave(); };
 
 function renderCasterClassOptions(){
@@ -2027,6 +2104,11 @@ function recalcAll(){
   document.getElementById('c-touch').textContent = touch;
   document.getElementById('c-ff').textContent = ff;
   document.getElementById('c-init').textContent = fmt(dexModRaw + (CHAR.combat.initMisc||0) + (CHAR.combat.initTemp||0));
+  document.getElementById('ssb-ac').textContent = ac;
+  document.getElementById('ssb-touch').textContent = touch;
+  document.getElementById('ssb-ff').textContent = ff;
+  document.getElementById('ssb-init').textContent = fmt(dexModRaw + (CHAR.combat.initMisc||0) + (CHAR.combat.initTemp||0));
+  document.getElementById('ssb-hp').textContent = `${CHAR.hp.current||0}/${CHAR.hp.max||0}`;
 
   // saves
   const savesBody = document.getElementById('savesBody');
@@ -2052,6 +2134,11 @@ function recalcAll(){
       queueSave(); recalcAll();
     };
   });
+  saveDefs.forEach(([label,key,abil])=>{
+    const total = totalBaseSave(key) + abilityMod(abil) + (CHAR.saves[key].misc||0) + (CHAR.saves[key].temp||0);
+    const el = document.getElementById('ssb-'+key);
+    if(el) el.textContent = fmt(total);
+  });
 
   // CMB / CMD
   const strMod = abilityMod('str');
@@ -2059,6 +2146,7 @@ function recalcAll(){
   const cmd = 10 + bab + strMod + dexModRaw + szAC + (CHAR.combat.cmdMisc||0);
   document.getElementById('c-cmb').textContent = fmt(cmb);
   document.getElementById('c-cmd').textContent = cmd;
+  document.getElementById('ssb-cmd').textContent = cmd;
 
   // weapons
   CHAR.weapons.forEach((w,i)=>{
