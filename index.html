@@ -185,6 +185,15 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
 .spell-toggle-btn:hover{border-color:var(--gold);}
 .spell-toggle-btn.on{background:linear-gradient(180deg,#d3ae6a,var(--gold));color:#211a0d;border-color:var(--gold);}
 .spell-toggle-btn.used{background:linear-gradient(180deg,#c46a5f,var(--danger));color:#2a1210;border-color:var(--danger);}
+.level-filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.level-filter-btn{
+  width:36px;height:36px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+  background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);
+  font-family:'JetBrains Mono';font-weight:700;font-size:13px;cursor:pointer;transition:all .12s;
+}
+.level-filter-btn.all-btn{width:auto;padding:0 12px;font-family:'Inter';font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+.level-filter-btn:hover{border-color:var(--gold);color:var(--text);}
+.level-filter-btn.active{background:linear-gradient(180deg,#d3ae6a,var(--gold));color:#211a0d;border-color:var(--gold);}
 .result-item.open .rdesc{display:block;}
 
 .class-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px;}
@@ -503,7 +512,8 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
     </div>
     <div id="spellSlotTables"></div>
     <div class="card" style="margin-top:16px;">
-      <h3>Prepared / Known Spells <span class="hint"><button class="btn small" id="spellSortBtn" style="padding:4px 10px;">Sort by Level</button></span></h3>
+      <h3>Prepared / Known Spells</h3>
+      <div id="spellLevelFilter" class="level-filter-row"></div>
       <table>
         <thead><tr><th class="num">Lvl</th><th>Name</th><th style="min-width:70px;">School</th><th class="num" style="width:80px;">Prep</th><th class="num" style="width:80px;">Cast</th><th style="width:40px;"></th></tr></thead>
         <tbody id="spellsPreparedBody"></tbody>
@@ -1829,13 +1839,33 @@ function findSpellMatch(name){
   return fuzzyFindByName(name, SPELLS);
 }
 
-let SPELL_SORT_BY_LEVEL = false;
+let SPELL_LEVEL_FILTER = 'all';
+function renderSpellLevelFilter(){
+  const box = document.getElementById('spellLevelFilter');
+  const present = new Set(CHAR.spellsPrepared.map(s=>s.level));
+  let html = `<button class="level-filter-btn all-btn ${SPELL_LEVEL_FILTER==='all'?'active':''}" data-lvl="all">All</button>`;
+  for(let L=0; L<=9; L++){
+    html += `<button class="level-filter-btn ${SPELL_LEVEL_FILTER===L?'active':''}" data-lvl="${L}" title="Level ${L}${present.has(L)?'':' (none prepared)'}" style="${present.has(L)?'':'opacity:.35;'}">${L}</button>`;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll('[data-lvl]').forEach(el=>{
+    el.onclick = ()=>{
+      const v = el.getAttribute('data-lvl');
+      SPELL_LEVEL_FILTER = v==='all' ? 'all' : parseInt(v);
+      renderSpellsPrepared();
+    };
+  });
+}
 function renderSpellsPrepared(){
+  renderSpellLevelFilter();
   const body = document.getElementById('spellsPreparedBody');
   body.innerHTML='';
   let order = CHAR.spellsPrepared.map((s,i)=>i);
-  if(SPELL_SORT_BY_LEVEL){
-    order.sort((a,b)=> (CHAR.spellsPrepared[a].level - CHAR.spellsPrepared[b].level) || CHAR.spellsPrepared[a].name.localeCompare(CHAR.spellsPrepared[b].name));
+  if(SPELL_LEVEL_FILTER!=='all'){
+    order = order.filter(i=>CHAR.spellsPrepared[i].level===SPELL_LEVEL_FILTER);
+  }
+  if(order.length===0){
+    body.innerHTML = '<tr><td colspan="6" class="helptext" style="padding:14px;">No spells at this level yet.</td></tr>';
   }
   order.forEach(i=>{
     const s = CHAR.spellsPrepared[i];
@@ -1885,7 +1915,7 @@ function renderSpellsPrepared(){
       el.onblur = ()=>{ renderSpellsPrepared(); };
     }
     if(el.getAttribute('data-f')==='level'){
-      el.onblur = ()=>{ if(SPELL_SORT_BY_LEVEL) renderSpellsPrepared(); };
+      el.onblur = ()=>{ renderSpellsPrepared(); };
     }
   });
   body.querySelectorAll('.spell-toggle-btn').forEach(el=>{
@@ -1900,12 +1930,8 @@ function renderSpellsPrepared(){
     el.onclick=()=>{ CHAR.spellsPrepared.splice(+el.getAttribute('data-del'),1); renderSpellsPrepared(); queueSave(); };
   });
 }
-document.getElementById('spellSortBtn').onclick = ()=>{
-  SPELL_SORT_BY_LEVEL = !SPELL_SORT_BY_LEVEL;
-  document.getElementById('spellSortBtn').textContent = SPELL_SORT_BY_LEVEL ? 'Sorted by Level ✓' : 'Sort by Level';
-  renderSpellsPrepared();
-};
 document.getElementById('addSpellRowBtn').onclick = ()=>{
+  SPELL_LEVEL_FILTER = 'all';
   CHAR.spellsPrepared.push({level:0,name:'New Spell',school:'',prepared:false,used:false});
   renderSpellsPrepared(); queueSave();
 };
