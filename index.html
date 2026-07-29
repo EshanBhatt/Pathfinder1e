@@ -194,6 +194,13 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
 .level-filter-btn.all-btn{width:auto;padding:0 12px;font-family:'Inter';font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
 .level-filter-btn:hover{border-color:var(--gold);color:var(--text);}
 .level-filter-btn.active{background:linear-gradient(180deg,#d3ae6a,var(--gold));color:#211a0d;border-color:var(--gold);}
+.active-wildshape-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:linear-gradient(180deg,#2a3320,#232a1c);border:1px solid var(--sage-dim);border-radius:8px;
+  padding:10px 14px;margin-bottom:12px;
+}
+.active-wildshape-banner .awsb-text{font-size:13px;color:var(--sage);}
+.active-wildshape-banner .awsb-text b{color:var(--text);}
 .sticky-statbar{
   position:sticky;top:0;z-index:20;display:flex;gap:0;
   background:linear-gradient(180deg,#1b2029ee,#1b2029f5);backdrop-filter:blur(6px);
@@ -295,6 +302,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
       <input type="file" id="importFileInput" accept="application/json" style="display:none;">
       <button class="btn small danger" id="deleteCharBtn">Delete</button>
       <span class="sync-pill" id="syncPill"><span class="dot" id="syncDot"></span><span id="syncPillText">Saved</span></span>
+      <button class="sync-pill" id="wildShapeIndicator" style="display:none;border-color:var(--sage-dim);color:var(--sage);cursor:pointer;font:inherit;"><span class="dot" style="background:var(--sage);"></span><span id="wildShapeIndicatorText">Wild Shape</span></button>
     </div>
   </div>
 
@@ -605,6 +613,8 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
         </select>
         <input type="text" id="refSearch" placeholder="Search by name, school, or type…">
       </div>
+      <div id="wildshapeSizeFilter" class="level-filter-row" style="display:none;"></div>
+      <div id="activeWildShapeBanner" style="display:none;"></div>
       <div class="results" id="refResults"></div>
       <div class="helptext">This is a curated Core Rulebook-focused dataset, written for quick reference at the table — not a full reproduction of every splatbook. Ask me to expand any list (e.g. Advanced Player's Guide spells) any time.</div>
     </div>
@@ -744,13 +754,28 @@ const SKILL_REF = {
 };
 
 // Feats — curated Core Rulebook set (mechanical text, paraphrased)
+const CREATURE_TYPES = [
+  {name:'Aberration',hd:'d8',bab:'3/4 (Medium)',saves:'Will',skillRanks:'4 + Int/HD',classSkills:'Acrobatics, Climb, Escape Artist, Fly, Intimidate, Knowledge (one), Perception, Spellcraft, Stealth, Survival, Swim',traits:'Darkvision 60 ft. Proficient with natural weapons (and simple weapons/described weapons if humanoid-shaped). Breathes, eats, sleeps.'},
+  {name:'Animal',hd:'d8',bab:'3/4 (Medium)',saves:'Fort, Ref',skillRanks:'2 + Int/HD',classSkills:'Acrobatics, Climb, Fly, Perception, Stealth, Swim',traits:'Int 1-2 only, low-light vision, always neutral, no treasure. Proficient with natural weapons only; a non-combative herbivore treats them as secondary (-5 attack, half Str bonus to damage). Not proficient with armor unless trained for war.'},
+  {name:'Construct',hd:'d10',bab:'Full (Fast)',saves:'None',skillRanks:'2 + Int/HD (usually mindless — no skills/feats)',classSkills:'None',traits:'No Con score (treated as 10). Low-light + darkvision 60 ft. Immune to mind-affecting effects, bleed, disease, death effects, necromancy, paralysis, poison, sleep, stunning, ability damage/drain, exhaustion, energy drain, nonlethal damage, and most Fortitude-save effects. Destroyed at 0 hp, can\'t be raised/resurrected. Gains bonus HP by size. Doesn\'t breathe, eat, or sleep.'},
+  {name:'Dragon',hd:'d12',bab:'Full (Fast)',saves:'Fort, Ref, Will',skillRanks:'6 + Int/HD',classSkills:'Appraise, Bluff, Climb, Craft, Diplomacy, Fly, Heal, Intimidate, Knowledge (all), Linguistics, Perception, Sense Motive, Spellcraft, Stealth, Survival, Swim, UMD',traits:'Darkvision 60 ft. + low-light vision. Immune to magic sleep and paralysis effects. Proficient with natural weapons only unless humanoid-capable. Breathes, eats, sleeps.'},
+  {name:'Fey',hd:'d6',bab:'1/2 (Slow)',saves:'Ref, Will',skillRanks:'6 + Int/HD',classSkills:'Acrobatics, Bluff, Climb, Craft, Diplomacy, Disguise, Escape Artist, Fly, Knowledge (geography/local/nature), Perception, Perform, Sense Motive, Sleight of Hand, Stealth, Swim, UMD',traits:'Low-light vision. Proficient with all simple weapons and described weapons; armor/shield proficiency as described. Breathes, eats, sleeps.'},
+  {name:'Humanoid',hd:'d8 (or by class)',bab:'3/4 (Medium, or by class)',saves:'One good save, usually Reflex',skillRanks:'2 + Int/HD (or by class)',classSkills:'Climb, Craft, Handle Animal, Heal, Profession, Ride, Survival (plus class list if it has class levels)',traits:'Usually Small or Medium, two arms/two legs/one head. Proficient with all simple weapons (or by class); armor/shield proficiency as described or by class. Breathes, eats, sleeps.'},
+  {name:'Magical Beast',hd:'d10',bab:'Full (Fast)',saves:'Fort, Ref',skillRanks:'2 + Int/HD',classSkills:'Acrobatics, Climb, Fly, Perception, Stealth, Swim',traits:'Can have Int above 2 (may know a language without necessarily speaking). Darkvision 60 ft. + low-light vision. Proficient with natural weapons only, no armor. Breathes, eats, sleeps.'},
+  {name:'Monstrous Humanoid',hd:'d10',bab:'Full (Fast)',saves:'Ref, Will',skillRanks:'4 + Int/HD',classSkills:'Climb, Craft, Fly, Intimidate, Perception, Ride, Stealth, Survival, Swim',traits:'Darkvision 60 ft. Proficient with all simple weapons and described weapons; armor/shield proficiency as described. Breathes, eats, sleeps.'},
+  {name:'Ooze',hd:'d8',bab:'3/4 (Medium)',saves:'None',skillRanks:'2 + Int/HD (usually mindless)',classSkills:'None',traits:'Usually mindless (no Int score) and immune to mind-affecting effects. Blind but has blindsight; immune to gaze/visual/illusion attacks. Immune to poison, sleep, paralysis, polymorph, stunning. Not subject to critical hits or flanking/sneak attack. Proficient with natural weapons only, no armor. Eats and breathes, doesn\'t sleep.'},
+  {name:'Outsider',hd:'d10',bab:'Full (Fast)',saves:'Two good saves, usually Ref & Will',skillRanks:'6 + Int/HD',classSkills:'Bluff, Craft, Knowledge (planes), Perception, Sense Motive, Stealth (+4 more by theme)',traits:'Darkvision 60 ft. Body and soul are one unit — raise dead/reincarnate/resurrection don\'t work (native outsiders are the exception). Proficient with all simple and martial weapons and described weapons; armor/shield as described. Doesn\'t need to eat/sleep (natives do).'},
+  {name:'Plant',hd:'d8',bab:'3/4 (Medium)',saves:'Fort',skillRanks:'2 + Int/HD (some mindless)',classSkills:'Perception, Stealth',traits:'Low-light vision. Immune to mind-affecting effects, paralysis, poison, polymorph, sleep, stunning. Proficient with natural weapons only, no armor. Breathes and eats, doesn\'t sleep.'},
+  {name:'Undead',hd:'d8',bab:'3/4 (Medium)',saves:'Will',skillRanks:'4 + Int/HD (many mindless)',classSkills:'Climb, Disguise, Fly, Intimidate, Knowledge (arcana/religion), Perception, Sense Motive, Spellcraft, Stealth',traits:'No Con score (uses Cha instead for HP/Fort/etc). Darkvision 60 ft. Immune to mind-affecting effects, bleed, death effects, disease, paralysis, poison, sleep, stunning, nonlethal damage, ability drain/energy drain, most Fortitude-save effects, and physical ability damage. Destroyed at 0 hp. Doesn\'t breathe, eat, or sleep.'},
+  {name:'Vermin',hd:'d8',bab:'3/4 (Medium)',saves:'Fort',skillRanks:'2 + Int/HD (most mindless)',classSkills:'None',traits:'Most are mindless (no Int score) and immune to mind-affecting effects. Darkvision 60 ft. Proficient with natural weapons only, no armor. Breathes, eats, sleeps.'},
+];
 const WILDSHAPE_SIZE = [
-  {name:'Diminutive Animal',str:'-4',dex:'+6',con:'+0',natural:'+1',note:'Available via Beast Shape III+ (druid level ~8+).'},
-  {name:'Tiny Animal',str:'-2',dex:'+4',con:'+0',natural:'+1',note:'Available via Beast Shape II+ (druid level ~6+).'},
-  {name:'Small Animal',str:'+0',dex:'+2',con:'+0',natural:'+1',note:'Available from druid level 4-5 (Beast Shape I).'},
-  {name:'Medium Animal',str:'+2',dex:'+0',con:'+0',natural:'+2',note:'Available from druid level 4-5 (Beast Shape I).'},
-  {name:'Large Animal',str:'+4',dex:'-2',con:'+0',natural:'+4',note:'Available via Beast Shape II+ (druid level ~6+).'},
-  {name:'Huge Animal',str:'+6',dex:'-4',con:'+0',natural:'+6',note:'Available via Beast Shape III+ (druid level ~8+).'},
+  {name:'Diminutive Animal',size:'Diminutive',str:'-4',dex:'+6',con:'+0',natural:'+1',note:'Available via Beast Shape III+ (druid level ~8+).'},
+  {name:'Tiny Animal',size:'Tiny',str:'-2',dex:'+4',con:'+0',natural:'+1',note:'Available via Beast Shape II+ (druid level ~6+).'},
+  {name:'Small Animal',size:'Small',str:'+0',dex:'+2',con:'+0',natural:'+1',note:'Available from druid level 4-5 (Beast Shape I).'},
+  {name:'Medium Animal',size:'Medium',str:'+2',dex:'+0',con:'+0',natural:'+2',note:'Available from druid level 4-5 (Beast Shape I).'},
+  {name:'Large Animal',size:'Large',str:'+4',dex:'-2',con:'+0',natural:'+4',note:'Available via Beast Shape II+ (druid level ~6+).'},
+  {name:'Huge Animal',size:'Huge',str:'+6',dex:'-4',con:'+0',natural:'+6',note:'Available via Beast Shape III+ (druid level ~8+).'},
 ];
 const WILDSHAPE_FORMS = [
   {name:'Wolf',size:'Medium',cr:'1',speed:'50 ft.',ac:'14, touch 12, flat-footed 12 (+2 Dex, +2 natural)',hp:'13 (2d8+4)',saves:'Fort +5, Ref +5, Will +1',attacks:'Bite +2 (1d6+1 plus trip)',abilities:'Str 13, Dex 15, Con 15, Int 2, Wis 12, Cha 6',other:'Low-light vision, scent. Skills: Perception +8, Stealth +6, Survival +1 (+5 tracking by scent).'},
@@ -1046,7 +1071,8 @@ function defaultChar(name){
     spellsPrepared:[],
     currency:{pp:0,gp:0,sp:0,cp:0},
     gear:[],
-    updatedAt: 0
+    updatedAt: 0,
+    activeWildShape: null
   };
 }
 
@@ -2128,6 +2154,15 @@ function recalcAll(){
   document.getElementById('ssb-init').textContent = fmt(dexModRaw + (CHAR.combat.initMisc||0) + (CHAR.combat.initTemp||0));
   document.getElementById('ssb-hp').textContent = `${CHAR.hp.current||0}/${CHAR.hp.max||0}`;
 
+  const wsInd = document.getElementById('wildShapeIndicator');
+  if(CHAR.activeWildShape){
+    wsInd.style.display = '';
+    document.getElementById('wildShapeIndicatorText').textContent = CHAR.activeWildShape.name;
+    wsInd.onclick = ()=>{ deactivateWildShape(); if(document.getElementById('panel-reference').classList.contains('active')) renderReference(); };
+  } else {
+    wsInd.style.display = 'none';
+  }
+
   // saves
   const savesBody = document.getElementById('savesBody');
   const saveDefs = [['Fortitude','fort','con'],['Reflex','ref','dex'],['Will','will','wis']];
@@ -2304,11 +2339,75 @@ function populateRefClassOptions(){
     sorted.map(c=>`<option value="${c}">${c[0].toUpperCase()+c.slice(1)}</option>`).join('');
 }
 
+let WILDSHAPE_SIZE_FILTER = 'all';
+function renderWildshapeSizeFilter(){
+  const box = document.getElementById('wildshapeSizeFilter');
+  const sizes = ['Diminutive','Tiny','Small','Medium','Large','Huge'];
+  let html = `<button class="level-filter-btn all-btn ${WILDSHAPE_SIZE_FILTER==='all'?'active':''}" data-size="all">All Sizes</button>`;
+  sizes.forEach(sz=>{
+    html += `<button class="level-filter-btn all-btn ${WILDSHAPE_SIZE_FILTER===sz?'active':''}" data-size="${sz}" style="width:auto;padding:0 10px;">${sz}</button>`;
+  });
+  box.innerHTML = html;
+  box.querySelectorAll('[data-size]').forEach(el=>{
+    el.onclick = ()=>{ WILDSHAPE_SIZE_FILTER = el.getAttribute('data-size'); renderReference(); };
+  });
+}
+
+function parseSignedNum(s){ return parseInt(String(s).replace('+',''),10) || 0; }
+
+function activateWildShape(label, sizeEntry){
+  // if something else is already active, cleanly revert it first —
+  // you can't be wild shaped into two things at once
+  if(CHAR.activeWildShape) deactivateWildShape();
+
+  const str = parseSignedNum(sizeEntry.str), dex = parseSignedNum(sizeEntry.dex),
+        con = parseSignedNum(sizeEntry.con), natural = parseSignedNum(sizeEntry.natural);
+
+  CHAR.abilities.str.temp = (CHAR.abilities.str.temp||0) + str;
+  CHAR.abilities.dex.temp = (CHAR.abilities.dex.temp||0) + dex;
+  CHAR.abilities.con.temp = (CHAR.abilities.con.temp||0) + con;
+  CHAR.ac.natural = (CHAR.ac.natural||0) + natural;
+
+  CHAR.activeWildShape = {name: label, str, dex, con, natural};
+  queueSave();
+  recalcAll();
+  toast('Wild Shape active: '+label);
+}
+
+function deactivateWildShape(){
+  const ws = CHAR.activeWildShape;
+  if(!ws) return;
+  CHAR.abilities.str.temp = (CHAR.abilities.str.temp||0) - ws.str;
+  CHAR.abilities.dex.temp = (CHAR.abilities.dex.temp||0) - ws.dex;
+  CHAR.abilities.con.temp = (CHAR.abilities.con.temp||0) - ws.con;
+  CHAR.ac.natural = (CHAR.ac.natural||0) - ws.natural;
+  CHAR.activeWildShape = null;
+  queueSave();
+  recalcAll();
+  toast('Wild Shape ended — stats reverted');
+}
+
+function renderActiveWildShapeBanner(){
+  const box = document.getElementById('activeWildShapeBanner');
+  if(!CHAR.activeWildShape){ box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  const ws = CHAR.activeWildShape;
+  box.innerHTML = `<div class="active-wildshape-banner">
+    <div class="awsb-text">Wild Shape active: <b>${escapeHtml(ws.name)}</b> (Str ${fmt(ws.str)}, Dex ${fmt(ws.dex)}, Con ${fmt(ws.con)}, Natural Armor ${fmt(ws.natural)})</div>
+    <button class="btn small danger" id="deactivateWildShapeBtn">Deactivate</button>
+  </div>`;
+  document.getElementById('deactivateWildShapeBtn').onclick = ()=>{ deactivateWildShape(); renderReference(); };
+}
+
 function renderReference(){
   const type = document.getElementById('refType').value;
   const q = document.getElementById('refSearch').value.trim().toLowerCase();
   const classFilter = document.getElementById('refClass').value;
   document.getElementById('refClass').style.display = type==='spells' ? '' : 'none';
+  if(type!=='wildshape'){
+    document.getElementById('wildshapeSizeFilter').style.display = 'none';
+    document.getElementById('activeWildShapeBanner').style.display = 'none';
+  }
   const box = document.getElementById('refResults');
   box.innerHTML = '';
   let items = [];
@@ -2388,9 +2487,14 @@ function renderReference(){
     });
   } else {
     // wildshape
-    const sizeMatches = WILDSHAPE_SIZE.filter(s=> !q || s.name.toLowerCase().includes(q));
-    const formMatches = WILDSHAPE_FORMS.filter(f=> !q || f.name.toLowerCase().includes(q));
-    items = [...sizeMatches, ...formMatches];
+    document.getElementById('wildshapeSizeFilter').style.display = 'flex';
+    renderWildshapeSizeFilter();
+    renderActiveWildShapeBanner();
+    const sizeFilter = WILDSHAPE_SIZE_FILTER;
+    const sizeMatches = WILDSHAPE_SIZE.filter(s=> (!q || s.name.toLowerCase().includes(q)) && (sizeFilter==='all' || s.size===sizeFilter));
+    const formMatches = WILDSHAPE_FORMS.filter(f=> (!q || f.name.toLowerCase().includes(q)) && (sizeFilter==='all' || f.size===sizeFilter));
+    const typeMatches = CREATURE_TYPES.filter(t=> !q || t.name.toLowerCase().includes(q));
+    items = [...sizeMatches, ...formMatches, ...typeMatches];
     if(sizeMatches.length){
       const hdr = document.createElement('div');
       hdr.style.cssText = 'padding:8px 12px;font-family:Cinzel;font-size:11px;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;background:var(--surface2);';
@@ -2399,6 +2503,7 @@ function renderReference(){
       sizeMatches.forEach(s=>{
         const div = document.createElement('div');
         div.className='result-item';
+        const isActive = CHAR.activeWildShape && CHAR.activeWildShape.name===s.name;
         div.innerHTML = `<div class="rname">${escapeHtml(s.name)}</div>
           <div class="spell-statblock" style="margin-top:6px;">
             <div><b>Str</b> ${escapeHtml(s.str)}</div>
@@ -2406,7 +2511,9 @@ function renderReference(){
             <div><b>Con</b> ${escapeHtml(s.con)}</div>
             <div><b>Natural Armor</b> ${escapeHtml(s.natural)}</div>
           </div>
-          <div class="rdesc" style="display:block;margin-top:5px;">${escapeHtml(s.note)}</div>`;
+          <div class="rdesc" style="display:block;margin-top:5px;">${escapeHtml(s.note)}
+            <br><button class="btn small ${isActive?'danger':''}" style="margin-top:8px;" data-wildshape-toggle="${escapeHtml(s.name)}">${isActive?'Deactivate':'Activate'}</button>
+          </div>`;
         box.appendChild(div);
       });
     }
@@ -2418,6 +2525,9 @@ function renderReference(){
       formMatches.forEach(f=>{
         const div = document.createElement('div');
         div.className='result-item';
+        const sizeEntry = WILDSHAPE_SIZE.find(s=>s.size===f.size);
+        const shapeLabel = f.name + ' (as ' + f.size + ' Animal)';
+        const isActive = CHAR.activeWildShape && CHAR.activeWildShape.name===shapeLabel;
         div.innerHTML = `<div class="rname">${escapeHtml(f.name)} <span class="tag">${escapeHtml(f.size)}${f.cr!=='—'?' · CR '+escapeHtml(f.cr):''}</span></div>
           <div class="spell-statblock" style="margin-top:6px;">
             <div><b>Speed</b> ${escapeHtml(f.speed)}</div>
@@ -2427,10 +2537,49 @@ function renderReference(){
             <div style="grid-column:span 2;"><b>Attacks</b> ${escapeHtml(f.attacks)}</div>
             <div style="grid-column:span 2;"><b>Abilities</b> ${escapeHtml(f.abilities)}</div>
           </div>
-          <div class="rdesc" style="display:block;margin-top:5px;">${escapeHtml(f.other)}</div>`;
+          <div class="rdesc" style="display:block;margin-top:5px;">${escapeHtml(f.other)}
+            ${sizeEntry ? `<br><button class="btn small ${isActive?'danger':''}" style="margin-top:8px;" data-wildshape-toggle="${escapeHtml(shapeLabel)}">${isActive?'Deactivate':'Activate ('+f.size+' Animal bonuses)'}</button>` : ''}
+          </div>`;
         box.appendChild(div);
       });
     }
+    if(typeMatches.length){
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'padding:8px 12px;font-family:Cinzel;font-size:11px;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;background:var(--surface2);';
+      hdr.textContent = 'Creature Types (for reference — determines HD, BAB, saves & class skills of any form)';
+      box.appendChild(hdr);
+      typeMatches.forEach(t=>{
+        const div = document.createElement('div');
+        div.className='result-item';
+        div.innerHTML = `<div class="rname">${escapeHtml(t.name)}</div>
+          <div class="spell-statblock" style="margin-top:6px;">
+            <div><b>Hit Die</b> ${escapeHtml(t.hd)}</div>
+            <div><b>BAB</b> ${escapeHtml(t.bab)}</div>
+            <div><b>Good Saves</b> ${escapeHtml(t.saves)}</div>
+            <div><b>Skill Ranks/HD</b> ${escapeHtml(t.skillRanks)}</div>
+            <div style="grid-column:span 2;"><b>Class Skills</b> ${escapeHtml(t.classSkills)}</div>
+          </div>
+          <div class="rdesc" style="display:block;margin-top:5px;">${escapeHtml(t.traits)}</div>`;
+        box.appendChild(div);
+      });
+    }
+    box.querySelectorAll('[data-wildshape-toggle]').forEach(btn=>{
+      btn.onclick = (e)=>{
+        e.stopPropagation();
+        const label = btn.getAttribute('data-wildshape-toggle');
+        if(CHAR.activeWildShape && CHAR.activeWildShape.name===label){
+          deactivateWildShape();
+        } else {
+          let sizeEntry = WILDSHAPE_SIZE.find(s=>s.name===label);
+          if(!sizeEntry){
+            const sz = label.match(/\(as (\w+) Animal\)/);
+            if(sz) sizeEntry = WILDSHAPE_SIZE.find(s=>s.size===sz[1]);
+          }
+          if(sizeEntry) activateWildShape(label, sizeEntry);
+        }
+        renderReference();
+      };
+    });
   }
   if(items.length===0) box.innerHTML = '<div class="helptext" style="padding:14px;">No matches. Try a different term.</div>';
 }
