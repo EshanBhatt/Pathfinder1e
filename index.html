@@ -2024,9 +2024,16 @@ function renderSpellsPrepared(){
         <div class="helptext">${escapeHtml(match.desc)}</div>
       </td>`;
       body.appendChild(dtr);
+    } else if(s.name && s.name.trim() && s.name.trim()!=='New Spell'){
+      const ntr = document.createElement('tr');
+      ntr.innerHTML = `<td colspan="6" style="padding:4px 6px 14px;">
+        <label style="margin-bottom:4px;">Description <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400;">— not in the bundled database, enter it yourself</span></label>
+        <textarea data-i="${i}" data-f="notes" style="min-height:60px;" placeholder="Casting time, range, effect, duration, save, etc.">${escapeHtml(s.notes||'')}</textarea>
+      </td>`;
+      body.appendChild(ntr);
     }
   });
-  body.querySelectorAll('input[data-f]').forEach(el=>{
+  body.querySelectorAll('input[data-f], textarea[data-f]').forEach(el=>{
     el.oninput = el.onchange = ()=>{
       const i=+el.getAttribute('data-i'), f=el.getAttribute('data-f');
       let v = el.value;
