@@ -558,6 +558,7 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
       </table>
       <button class="btn small" id="addSpellRowBtn">+ Add Spell</button>
       <div class="helptext">Type an exact spell name and click away — if it matches the bundled reference list, its level, school, and full stat block auto-fill and expand below the row. Or use the Reference tab and click "Add to sheet" to drop one in directly.</div>
+      <div class="helptext">Save DC = 10 + spell level + your first spellcasting class's ability modifier, plus +1 per matching Spell Focus feat (and another +1 for Greater Spell Focus) detected from your Feats list. If you have more than one spellcasting class, this uses the first one listed on the Spells tab.</div>
     </div>
   </div>
 
@@ -1991,6 +1992,34 @@ function renderSpellLevelFilter(){
     };
   });
 }
+function getPrimaryCasterAbilityMod(){
+  if(!CHAR.casters || CHAR.casters.length===0) return null;
+  return abilityMod(CHAR.casters[0].ability);
+}
+function getSpellFocusBonus(schoolStr){
+  if(!schoolStr) return 0;
+  const baseSchool = (schoolStr.match(/^[A-Za-z]+/)||[''])[0].toLowerCase();
+  if(!baseSchool) return 0;
+  let bonus = 0;
+  (CHAR.feats||[]).forEach(f=>{
+    const m = f.match(/\(([^)]+)\)/);
+    if(!m) return;
+    if(!m[1].toLowerCase().includes(baseSchool)) return;
+    const lower = f.toLowerCase();
+    if(lower.includes('greater spell focus')) bonus += 1;
+    else if(lower.includes('spell focus')) bonus += 1;
+  });
+  return bonus;
+}
+function spellDcBadge(level, school){
+  const abilMod = getPrimaryCasterAbilityMod();
+  if(abilMod===null) return '';
+  const focusBonus = getSpellFocusBonus(school);
+  const dc = 10 + (level||0) + abilMod + focusBonus;
+  const focusNote = focusBonus ? ` <span style="color:var(--sage);">(incl. +${focusBonus} Spell Focus)</span>` : '';
+  return `<div style="margin-bottom:6px;"><b style="color:var(--gold-bright);">Save DC ${dc}</b>${focusNote}</div>`;
+}
+
 function renderSpellsPrepared(){
   renderSpellLevelFilter();
   const body = document.getElementById('spellsPreparedBody');
@@ -2018,6 +2047,7 @@ function renderSpellsPrepared(){
     if(match){
       const dtr = document.createElement('tr');
       dtr.innerHTML = `<td colspan="6" style="padding:8px 6px 14px;">
+        ${spellDcBadge(match.level, match.school)}
         <div class="spell-statblock" style="margin-bottom:6px;">
           <div><b>Casting Time</b> ${escapeHtml(match.ct)}</div>
           <div><b>Components</b> ${escapeHtml(match.comp)}</div>
@@ -2033,6 +2063,7 @@ function renderSpellsPrepared(){
     } else if(s.name && s.name.trim() && s.name.trim()!=='New Spell'){
       const ntr = document.createElement('tr');
       ntr.innerHTML = `<td colspan="6" style="padding:4px 6px 14px;">
+        ${spellDcBadge(s.level, s.school)}
         <label style="margin-bottom:4px;">Description <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400;">— not in the bundled database, enter it yourself</span></label>
         <textarea data-i="${i}" data-f="notes" style="min-height:60px;" placeholder="Casting time, range, effect, duration, save, etc.">${escapeHtml(s.notes||'')}</textarea>
       </td>`;
