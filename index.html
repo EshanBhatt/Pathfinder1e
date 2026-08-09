@@ -365,6 +365,14 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
           </div>
         </div>
         <div class="row">
+          <div class="field"><label>Body Type <span class="hint">affects carrying capacity</span></label>
+            <select data-bind="info.bodyType">
+              <option value="biped">Biped</option>
+              <option value="quadruped">Quadruped</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
           <div class="field"><label>Gender</label><input type="text" data-bind="info.gender"></div>
           <div class="field"><label>Age</label><input type="text" data-bind="info.age"></div>
         </div>
@@ -679,15 +687,15 @@ const ABILS = ['str','dex','con','int','wis','cha'];
 const ABIL_LABEL = {str:'STR',dex:'DEX',con:'CON',int:'INT',wis:'WIS',cha:'CHA'};
 
 const SIZES = {
-  fine:      {ac:8,  stealth:16, fly:8,  carry:0.125},
-  diminutive:{ac:4,  stealth:12, fly:6,  carry:0.25},
-  tiny:      {ac:2,  stealth:8,  fly:4,  carry:0.5},
-  small:     {ac:1,  stealth:4,  fly:2,  carry:0.75},
-  medium:    {ac:0,  stealth:0,  fly:0,  carry:1},
-  large:     {ac:-1, stealth:-4, fly:-2, carry:2},
-  huge:      {ac:-2, stealth:-8, fly:-4, carry:4},
-  gargantuan:{ac:-4, stealth:-12,fly:-6, carry:8},
-  colossal:  {ac:-8, stealth:-16,fly:-8, carry:16}
+  fine:      {ac:8,  stealth:16, fly:8,  carry:0.125, carryQuad:0.25},
+  diminutive:{ac:4,  stealth:12, fly:6,  carry:0.25,  carryQuad:0.5},
+  tiny:      {ac:2,  stealth:8,  fly:4,  carry:0.5,   carryQuad:0.75},
+  small:     {ac:1,  stealth:4,  fly:2,  carry:0.75,  carryQuad:1},
+  medium:    {ac:0,  stealth:0,  fly:0,  carry:1,     carryQuad:1.5},
+  large:     {ac:-1, stealth:-4, fly:-2, carry:2,     carryQuad:3},
+  huge:      {ac:-2, stealth:-8, fly:-4, carry:4,     carryQuad:6},
+  gargantuan:{ac:-4, stealth:-12,fly:-6, carry:8,     carryQuad:12},
+  colossal:  {ac:-8, stealth:-16,fly:-8, carry:16,    carryQuad:24}
 };
 
 // PF1e core skill list: [name, ability, armorCheckPenalty, trainedOnly]
@@ -1064,7 +1072,7 @@ const LOW_TABLE = { // e.g. Paladin/Ranger-style, levels 1-4, starts casting at 
 function defaultChar(name){
   return {
     name: name || 'New Character',
-    info:{name:name||'', player:'', race:'', size:'medium', gender:'', age:'', height:'', weight:'', hair:'', eyes:'', alignment:'', deity:'', background:'', languages:''},
+    info:{name:name||'', player:'', race:'', size:'medium', bodyType:'biped', gender:'', age:'', height:'', weight:'', hair:'', eyes:'', alignment:'', deity:'', background:'', languages:''},
     classes:[{name:'',level:1,bab:'full',fort:'good',ref:'poor',will:'poor',hitDie:'d8'}],
     abilities:{str:{base:10,enh:0,misc:0,temp:0},dex:{base:10,enh:0,misc:0,temp:0},con:{base:10,enh:0,misc:0,temp:0},int:{base:10,enh:0,misc:0,temp:0},wis:{base:10,enh:0,misc:0,temp:0},cha:{base:10,enh:0,misc:0,temp:0}},
     hp:{max:0,current:0,nonlethal:0,temp:0},
@@ -1557,7 +1565,10 @@ function totalBaseSave(kind){
   return CHAR.classes.reduce((s,c)=> s + saveForEntry(c, kind), 0);
 }
 function sizeMod(){ return SIZES[CHAR.info.size||'medium'].ac; }
-function carryMultiplier(){ return SIZES[CHAR.info.size||'medium'].carry; }
+function carryMultiplier(){
+  const sz = SIZES[CHAR.info.size||'medium'];
+  return (CHAR.info.bodyType==='quadruped') ? sz.carryQuad : sz.carry;
+}
 
 /* =========================================================================
    RENDER: bindings
@@ -2336,24 +2347,27 @@ function recalcAll(){
 }
 
 function carryCapacity(str){
-  // PF1e core carrying capacity table (medium biped), str 1-20 explicit, extrapolated beyond
+  // PF1e core Table: Carrying Capacity (medium biped baseline), verified exact
+  // values through Str 29. Str 30+ uses the official "Tremendous Strength"
+  // rule: same ones-digit row in 20-29, x4 per full 10 points above it.
   const table = {
     1:[3,6,10],2:[6,13,20],3:[10,20,30],4:[13,26,40],5:[16,33,50],6:[20,40,60],7:[23,46,70],
     8:[26,53,80],9:[30,60,90],10:[33,66,100],11:[38,76,115],12:[43,86,130],13:[50,100,150],
     14:[58,116,175],15:[66,133,200],16:[76,153,230],17:[86,173,260],18:[100,200,300],
-    19:[116,233,350],20:[133,266,400]
+    19:[116,233,350],20:[133,266,400],
+    21:[153,306,460],22:[173,346,520],23:[200,400,600],24:[233,466,700],25:[266,533,800],
+    26:[306,613,920],27:[346,693,1040],28:[400,800,1200],29:[466,933,1400]
   };
   if(str<1) str=1;
   if(table[str]) return {light:table[str][0], med:table[str][1], heavy:table[str][2]};
-  if(str>20){
-    // each 10 str beyond 20 quadruples; approximate via formula for str 21-29 (x4 per +10)
-    let base = table[20];
-    let over = str-20;
-    let mult = Math.pow(4, Math.floor(over/10));
-    let remainder = over%10;
-    const stepTable = [1,1.34,1.75,2.34,3.0,4,5.34,6.6,8.66,10]; // rough multiplier steps within a decade
-    let stepMult = remainder===0?1:stepTable[remainder]||1;
-    return {light: base[0]*mult*stepMult, med: base[1]*mult*stepMult, heavy: base[2]*mult*stepMult};
+  if(str>29){
+    const onesDigit = str % 10;
+    let rowStr = 20 + onesDigit; // e.g. str 34 -> row 24
+    if(rowStr > 29) rowStr -= 10; // ones digit 0-9 maps into 20-29 range
+    const base = table[rowStr];
+    const tensAbove = Math.floor((str - rowStr) / 10);
+    const mult = Math.pow(4, tensAbove);
+    return {light: base[0]*mult, med: base[1]*mult, heavy: base[2]*mult};
   }
   return {light:0,med:0,heavy:0};
 }
