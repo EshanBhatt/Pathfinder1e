@@ -177,6 +177,10 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:poin
   padding:9px 11px;font-size:11.5px;color:var(--text-dim);
 }
 .spell-statblock b{color:var(--sage);font-weight:600;margin-right:4px;}
+.manual-statblock input[type="text"]{
+  display:inline-block;width:calc(100% - 90px);padding:3px 6px;font-size:11px;
+  background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--text);
+}
 .spell-toggle-btn{
   width:100%;padding:6px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
   background:var(--surface2);border:1px solid var(--border);color:var(--text-faint);border-radius:6px;cursor:pointer;
@@ -2061,11 +2065,23 @@ function renderSpellsPrepared(){
       </td>`;
       body.appendChild(dtr);
     } else if(s.name && s.name.trim() && s.name.trim()!=='New Spell'){
+      if(!s.manual) s.manual = {ct:'', comp:'', range:'', target:'', duration:'', save:'', sr:'', desc: s.notes||''};
+      const mf = s.manual;
       const ntr = document.createElement('tr');
-      ntr.innerHTML = `<td colspan="6" style="padding:4px 6px 14px;">
+      ntr.innerHTML = `<td colspan="6" style="padding:8px 6px 14px;">
         ${spellDcBadge(s.level, s.school)}
-        <label style="margin-bottom:4px;">Description <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:400;">— not in the bundled database, enter it yourself</span></label>
-        <textarea data-i="${i}" data-f="notes" style="min-height:60px;" placeholder="Casting time, range, effect, duration, save, etc.">${escapeHtml(s.notes||'')}</textarea>
+        <div class="helptext" style="margin-bottom:6px;">Not in the bundled database — fill in the stat block yourself, same fields as an auto-filled spell.</div>
+        <div class="spell-statblock manual-statblock" style="margin-bottom:6px;">
+          <div><b>Casting Time</b> <input type="text" data-i="${i}" data-mf="ct" value="${escapeHtml(mf.ct)}" placeholder="1 standard action"></div>
+          <div><b>Components</b> <input type="text" data-i="${i}" data-mf="comp" value="${escapeHtml(mf.comp)}" placeholder="V, S, DF"></div>
+          <div><b>Range</b> <input type="text" data-i="${i}" data-mf="range" value="${escapeHtml(mf.range)}" placeholder="medium (100 ft. + 10 ft./level)"></div>
+          <div><b>Target/Area</b> <input type="text" data-i="${i}" data-mf="target" value="${escapeHtml(mf.target)}" placeholder="one creature"></div>
+          <div><b>Duration</b> <input type="text" data-i="${i}" data-mf="duration" value="${escapeHtml(mf.duration)}" placeholder="1 round/level"></div>
+          <div><b>Saving Throw</b> <input type="text" data-i="${i}" data-mf="save" value="${escapeHtml(mf.save)}" placeholder="Reflex negates"></div>
+          <div><b>Spell Resistance</b> <input type="text" data-i="${i}" data-mf="sr" value="${escapeHtml(mf.sr)}" placeholder="yes"></div>
+        </div>
+        <label style="margin-bottom:4px;">Description</label>
+        <textarea data-i="${i}" data-mf="desc" style="min-height:60px;" placeholder="What the spell does…">${escapeHtml(mf.desc)}</textarea>
       </td>`;
       body.appendChild(ntr);
     }
@@ -2090,6 +2106,14 @@ function renderSpellsPrepared(){
     if(el.getAttribute('data-f')==='level'){
       el.onblur = ()=>{ renderSpellsPrepared(); };
     }
+  });
+  body.querySelectorAll('[data-mf]').forEach(el=>{
+    el.oninput = el.onchange = ()=>{
+      const i=+el.getAttribute('data-i'), mf=el.getAttribute('data-mf');
+      if(!CHAR.spellsPrepared[i].manual) CHAR.spellsPrepared[i].manual = {ct:'',comp:'',range:'',target:'',duration:'',save:'',sr:'',desc:''};
+      CHAR.spellsPrepared[i].manual[mf] = el.value;
+      queueSave();
+    };
   });
   body.querySelectorAll('.spell-toggle-btn').forEach(el=>{
     el.onclick = ()=>{
