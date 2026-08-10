@@ -783,12 +783,14 @@ const CREATURE_TYPES = [
   {name:'Vermin',hd:'d8',bab:'3/4 (Medium)',saves:'Fort',skillRanks:'2 + Int/HD (most mindless)',classSkills:'None',traits:'Most are mindless (no Int score) and immune to mind-affecting effects. Darkvision 60 ft. Proficient with natural weapons only, no armor. Breathes, eats, sleeps.'},
 ];
 const WILDSHAPE_SIZE = [
-  {name:'Diminutive Animal',size:'Diminutive',str:'-4',dex:'+6',con:'+0',natural:'+1',note:'Available via Beast Shape III+ (druid level ~8+).'},
-  {name:'Tiny Animal',size:'Tiny',str:'-2',dex:'+4',con:'+0',natural:'+1',note:'Available via Beast Shape II+ (druid level ~6+).'},
-  {name:'Small Animal',size:'Small',str:'+0',dex:'+2',con:'+0',natural:'+1',note:'Available from druid level 4-5 (Beast Shape I).'},
-  {name:'Medium Animal',size:'Medium',str:'+2',dex:'+0',con:'+0',natural:'+2',note:'Available from druid level 4-5 (Beast Shape I).'},
-  {name:'Large Animal',size:'Large',str:'+4',dex:'-2',con:'+0',natural:'+4',note:'Available via Beast Shape II+ (druid level ~6+).'},
-  {name:'Huge Animal',size:'Huge',str:'+6',dex:'-4',con:'+0',natural:'+6',note:'Available via Beast Shape III+ (druid level ~8+).'},
+  {name:'Diminutive Animal',size:'Diminutive',str:'-4',dex:'+6',con:'+0',natural:'+1',note:'Available from druid level 8 (beast shape III).'},
+  {name:'Tiny Animal',size:'Tiny',str:'-2',dex:'+4',con:'+0',natural:'+1',note:'Available from druid level 6 (beast shape II).'},
+  {name:'Small Animal',size:'Small',str:'+0',dex:'+2',con:'+0',natural:'+1',note:'Available from druid level 4 (beast shape I).'},
+  {name:'Medium Animal',size:'Medium',str:'+2',dex:'+0',con:'+0',natural:'+2',note:'Available from druid level 4 (beast shape I).'},
+  {name:'Large Animal',size:'Large',str:'+4',dex:'-2',con:'+0',natural:'+4',note:'Available from druid level 6 (beast shape II).'},
+  {name:'Huge Animal',size:'Huge',str:'+6',dex:'-4',con:'+0',natural:'+6',note:'Available from druid level 8 (beast shape III).'},
+  {name:'Small Air Elemental',size:'Small',str:'+0',dex:'+2',con:'+0',natural:'+2',note:'ELEMENTAL FORM \u2014 available from druid level 6 (elemental body I). Also grants fly 60 ft. (perfect maneuverability), darkvision 60 ft., and the whirlwind ability. Elemental forms also grant immunity to bleed, critical hits, and sneak attacks.'},
+  {name:'Medium Air Elemental',size:'Medium',str:'+0',dex:'+4',con:'+0',natural:'+3',note:'ELEMENTAL FORM \u2014 available from druid level 8 (elemental body II). Also grants fly 60 ft. (perfect maneuverability), darkvision 60 ft., and the whirlwind ability. Elemental forms also grant immunity to bleed, critical hits, and sneak attacks.'},
 ];
 const WILDSHAPE_FORMS = [
   {name:'Wolf',size:'Medium',cr:'1',speed:'50 ft.',ac:'14, touch 12, flat-footed 12 (+2 Dex, +2 natural)',hp:'13 (2d8+4)',saves:'Fort +5, Ref +5, Will +1',attacks:'Bite +2 (1d6+1 plus trip)',abilities:'Str 13, Dex 15, Con 15, Int 2, Wis 12, Cha 6',other:'Low-light vision, scent. Skills: Perception +8, Stealth +6, Survival +1 (+5 tracking by scent).'},
@@ -797,6 +799,8 @@ const WILDSHAPE_FORMS = [
   {name:'Bear, Brown/Grizzly',size:'Large',cr:'4',speed:'40 ft.',ac:'16, touch 10, flat-footed 15 (+1 Dex, +6 natural, -1 size)',hp:'42 (5d8+20)',saves:'Fort +8, Ref +5, Will +2',attacks:'2 claws +7 (1d6+5 plus grab), bite +7 (1d6+5)',abilities:'Str 21, Dex 13, Con 19, Int 2, Wis 12, Cha 6',other:'Low-light vision, scent. Feats: Endurance, Run, Skill Focus (Survival).'},
   {name:'Eagle',size:'Small',cr:'1/2',speed:'10 ft., fly 80 ft. (average)',ac:'14, touch 13, flat-footed 12 (+2 Dex, +1 natural, +1 size)',hp:'5 (1d8+1)',saves:'Fort +3, Ref +4, Will +2',attacks:'2 talons +3 (1d4), bite +3 (1d4)',abilities:'Str 10, Dex 15, Con 12, Int 2, Wis 15, Cha 7',other:'Low-light vision. Feats: Weapon Finesse. +8 racial bonus on Perception.'},
   {name:'Elephant/Mastodon (7th-level advancement)',size:'Large',cr:'—',speed:'40 ft.',ac:'+3 natural armor (advancement bonus)',hp:'—',saves:'—',attacks:'Gore (2d6), Slam (1d8)',abilities:'Base Str 14, Dex 14, Con 13, Int 2, Wis 13, Cha 7 (+8 Str, -2 Dex, +4 Con at 7th-level advancement)',other:'Low-light vision, scent. Special: trample (2d6), impaling horn, powerful charge (gore) at Large size.'},
+  {name:'Air Elemental, Small',size:'Small',cr:'1',speed:'fly 60 ft. (perfect)',ac:'17, touch 15, flat-footed 13 (+4 Dex, +2 natural, +1 size)',hp:'11 (2d10)',saves:'Fort +3, Ref +7, Will +0',attacks:'Slam +6 (1d4)',abilities:'Str 12, Dex 19, Con 10, Int 4, Wis 11, Cha 11',other:'Darkvision 60 ft. Whirlwind ability. Feats: Flyby Attack, Improved Initiative, Weapon Finesse. Airborne creatures take -1 on attack and damage rolls against it.'},
+  {name:'Air Elemental, Medium',size:'Medium',cr:'3',speed:'fly 100 ft. (perfect)',ac:'19, touch 16, flat-footed 13 (+5 Dex, +1 dodge, +3 natural)',hp:'30 (4d10+8)',saves:'Fort +5, Ref +9, Will +1',attacks:'Slam +9 (1d6+3)',abilities:'Str 14, Dex 21, Con 14, Int 4, Wis 11, Cha 11',other:'Darkvision 60 ft. Whirlwind (DC 14, 10-30 ft.). Feats: Dodge, Flyby Attack, Improved Initiative, Weapon Finesse. Airborne creatures take -1 on attack and damage rolls against it.'},
 ];
 
 const FEATS = [
@@ -2607,8 +2611,15 @@ function renderReference(){
       formMatches.forEach(f=>{
         const div = document.createElement('div');
         div.className='result-item';
-        const sizeEntry = WILDSHAPE_SIZE.find(s=>s.size===f.size);
-        const shapeLabel = f.name + ' (as ' + f.size + ' Animal)';
+        const isElemental = /elemental/i.test(f.name);
+        let sizeEntry;
+        if(isElemental){
+          const elemType = /air/i.test(f.name) ? 'Air' : null;
+          sizeEntry = elemType ? WILDSHAPE_SIZE.find(s=>s.name===`${f.size} ${elemType} Elemental`) : null;
+        } else {
+          sizeEntry = WILDSHAPE_SIZE.find(s=>s.size===f.size && /Animal/i.test(s.name));
+        }
+        const shapeLabel = f.name + ' (as ' + f.size + (isElemental ? ' Air Elemental)' : ' Animal)');
         const isActive = CHAR.activeWildShape && CHAR.activeWildShape.name===shapeLabel;
         div.innerHTML = `<div class="rname">${escapeHtml(f.name)} <span class="tag">${escapeHtml(f.size)}${f.cr!=='—'?' · CR '+escapeHtml(f.cr):''}</span></div>
           <div class="spell-statblock" style="margin-top:6px;">
@@ -2620,7 +2631,7 @@ function renderReference(){
             <div style="grid-column:span 2;"><b>Abilities</b> ${escapeHtml(f.abilities)}</div>
           </div>
           <div class="rdesc" style="display:block;margin-top:5px;">${escapeHtml(f.other)}
-            ${sizeEntry ? `<br><button class="btn small ${isActive?'danger':''}" style="margin-top:8px;" data-wildshape-toggle="${escapeHtml(shapeLabel)}">${isActive?'Deactivate':'Activate ('+f.size+' Animal bonuses)'}</button>` : ''}
+            ${sizeEntry ? `<br><button class="btn small ${isActive?'danger':''}" style="margin-top:8px;" data-wildshape-toggle="${escapeHtml(shapeLabel)}">${isActive?'Deactivate':'Activate ('+f.size+(isElemental?' Air Elemental':' Animal')+' bonuses)'}</button>` : ''}
           </div>`;
         box.appendChild(div);
       });
@@ -2654,8 +2665,13 @@ function renderReference(){
         } else {
           let sizeEntry = WILDSHAPE_SIZE.find(s=>s.name===label);
           if(!sizeEntry){
-            const sz = label.match(/\(as (\w+) Animal\)/);
-            if(sz) sizeEntry = WILDSHAPE_SIZE.find(s=>s.size===sz[1]);
+            const elemMatch = label.match(/\(as (\w+) Air Elemental\)/);
+            if(elemMatch){
+              sizeEntry = WILDSHAPE_SIZE.find(s=>s.name===`${elemMatch[1]} Air Elemental`);
+            } else {
+              const sz = label.match(/\(as (\w+) Animal\)/);
+              if(sz) sizeEntry = WILDSHAPE_SIZE.find(s=>s.size===sz[1] && /Animal/i.test(s.name));
+            }
           }
           if(sizeEntry) activateWildShape(label, sizeEntry);
         }
