@@ -2096,7 +2096,7 @@ function renderSpellsPrepared(){
           <div><b>Spell Resistance</b> <input type="text" data-i="${i}" data-mf="sr" value="${escapeHtml(mf.sr)}" placeholder="yes"></div>
         </div>
         <label style="margin-bottom:4px;">Description</label>
-        <textarea data-i="${i}" data-mf="desc" style="min-height:60px;" placeholder="What the spell does…">${escapeHtml(mf.desc)}</textarea>
+        <textarea data-i="${i}" data-mf="desc" class="autogrow" style="min-height:60px;overflow:hidden;resize:none;" placeholder="What the spell does…">${escapeHtml(mf.desc)}</textarea>
       </td>`;
       body.appendChild(ntr);
     }
@@ -2122,13 +2122,21 @@ function renderSpellsPrepared(){
       el.onblur = ()=>{ renderSpellsPrepared(); };
     }
   });
+  const autoGrow = (el)=>{
+    if(!el.classList.contains('autogrow')) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  };
   body.querySelectorAll('[data-mf]').forEach(el=>{
     el.oninput = el.onchange = ()=>{
       const i=+el.getAttribute('data-i'), mf=el.getAttribute('data-mf');
       if(!CHAR.spellsPrepared[i].manual) CHAR.spellsPrepared[i].manual = {ct:'',comp:'',range:'',target:'',duration:'',save:'',sr:'',desc:''};
       CHAR.spellsPrepared[i].manual[mf] = el.value;
+      autoGrow(el);
       queueSave();
     };
+    // size correctly on first render, not just after a keystroke
+    autoGrow(el);
   });
   body.querySelectorAll('.spell-toggle-btn').forEach(el=>{
     el.onclick = ()=>{
@@ -2695,7 +2703,13 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('panel-'+btn.getAttribute('data-tab')).classList.add('active');
+  const panel = document.getElementById('panel-'+btn.getAttribute('data-tab'));
+  panel.classList.add('active');
+  // textareas measure as zero-height while hidden — resize once visible
+  panel.querySelectorAll('textarea.autogrow').forEach(el=>{
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  });
 });
 
 /* =========================================================================
