@@ -195,6 +195,24 @@ textarea.desc-match{
 .spell-toggle-btn.on{background:linear-gradient(180deg,#d3ae6a,var(--gold));color:#211a0d;border-color:var(--gold);}
 .spell-toggle-btn.used{background:linear-gradient(180deg,#c46a5f,var(--danger));color:#2a1210;border-color:var(--danger);}
 .level-filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.spell-search-wrap{position:relative;display:flex;gap:8px;align-items:center;margin-bottom:12px;max-width:520px;}
+.spell-search-wrap input[type=text]{flex:1;}
+.search-suggestions{
+  position:absolute;top:100%;left:0;right:0;z-index:30;margin-top:4px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);max-height:280px;overflow-y:auto;display:none;
+}
+.search-suggestions.open{display:block;}
+.search-suggestion{
+  padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-soft);
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+.search-suggestion:last-child{border-bottom:none;}
+.search-suggestion:hover,.search-suggestion.highlighted{background:var(--surface3);}
+.search-suggestion .ss-name{font-size:13px;color:var(--text);}
+.search-suggestion .ss-name mark{background:transparent;color:var(--gold-bright);font-weight:700;}
+.search-suggestion .ss-meta{font-size:10.5px;color:var(--text-faint);white-space:nowrap;}
+.search-no-results{padding:10px 12px;font-size:12px;color:var(--text-faint);}
 .level-filter-btn{
   width:36px;height:36px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
   background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);
@@ -568,6 +586,11 @@ textarea.desc-match{
     <div id="spellSlotTables"></div>
     <div class="card" style="margin-top:16px;">
       <h3>Prepared / Known Spells</h3>
+      <div class="spell-search-wrap">
+        <input type="text" id="spellSearchInput" placeholder="Search your spells…" autocomplete="off">
+        <button class="btn small" id="spellSearchClear" style="display:none;">Clear</button>
+        <div id="spellSearchSuggestions" class="search-suggestions"></div>
+      </div>
       <div id="spellLevelFilter" class="level-filter-row"></div>
       <table>
         <thead><tr><th class="num">Lvl</th><th>Name</th><th style="min-width:70px;">School</th><th class="num" style="width:80px;">Prep</th><th class="num" style="width:80px;">Cast</th><th style="width:40px;"></th></tr></thead>
@@ -2000,6 +2023,104 @@ function findSpellMatch(name){
 }
 
 let SPELL_LEVEL_FILTER = 'all';
+let SPELL_SEARCH_QUERY = '';
+let SPELL_SUGGESTION_INDEX = -1;
+
+function highlightMatch(text, query){
+  if(!query) return escapeHtml(text);
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if(idx === -1) return escapeHtml(text);
+  return escapeHtml(text.slice(0, idx))
+    + '<mark>' + escapeHtml(text.slice(idx, idx + query.length)) + '</mark>'
+    + escapeHtml(text.slice(idx + query.length));
+}
+
+function getSpellSuggestions(query){
+  if(!query) return [];
+  const q = query.toLowerCase();
+  const seen = new Set();
+  const starts = [], contains = [];
+  CHAR.spellsPrepared.forEach((s, i)=>{
+    const name = (s.name||'').trim();
+    if(!name || seen.has(name.toLowerCase())) return;
+    const lower = name.toLowerCase();
+    if(lower.startsWith(q)){ seen.add(lower); starts.push({name, level:s.level, school:s.school, i}); }
+    else if(lower.includes(q)){ seen.add(lower); contains.push({name, level:s.level, school:s.school, i}); }
+  });
+  return [...starts, ...contains].slice(0, 8);
+}
+
+function renderSpellSuggestions(){
+  const box = document.getElementById('spellSearchSuggestions');
+  const query = document.getElementById('spellSearchInput').value.trim();
+  const suggestions = getSpellSuggestions(query);
+  if(suggestions.length === 0){
+    box.classList.remove('open');
+    box.innerHTML = '';
+    return;
+  }
+  box.innerHTML = suggestions.map((s, idx)=>`
+    <div class="search-suggestion ${idx===SPELL_SUGGESTION_INDEX?'highlighted':''}" data-sugg="${escapeHtml(s.name)}">
+      <span class="ss-name">${highlightMatch(s.name, query)}</span>
+      <span class="ss-meta">Lvl ${s.level}${s.school?' · '+escapeHtml(s.school):''}</span>
+    </div>`).join('');
+  box.classList.add('open');
+  box.querySelectorAll('[data-sugg]').forEach(el=>{
+    el.onmousedown = (e)=>{
+      e.preventDefault();
+      applySpellSearch(el.getAttribute('data-sugg'));
+    };
+  });
+}
+
+function applySpellSearch(value){
+  const input = document.getElementById('spellSearchInput');
+  input.value = value;
+  SPELL_SEARCH_QUERY = value;
+  SPELL_SUGGESTION_INDEX = -1;
+  document.getElementById('spellSearchSuggestions').classList.remove('open');
+  document.getElementById('spellSearchClear').style.display = value ? '' : 'none';
+  renderSpellsPrepared();
+}
+
+function initSpellSearch(){
+  const input = document.getElementById('spellSearchInput');
+  const clearBtn = document.getElementById('spellSearchClear');
+  const box = document.getElementById('spellSearchSuggestions');
+
+  input.oninput = ()=>{
+    SPELL_SEARCH_QUERY = input.value.trim();
+    SPELL_SUGGESTION_INDEX = -1;
+    clearBtn.style.display = input.value ? '' : 'none';
+    renderSpellSuggestions();
+    renderSpellsPrepared();
+  };
+  input.onkeydown = (e)=>{
+    const suggestions = getSpellSuggestions(input.value.trim());
+    if(e.key === 'ArrowDown'){
+      e.preventDefault();
+      SPELL_SUGGESTION_INDEX = Math.min(SPELL_SUGGESTION_INDEX + 1, suggestions.length - 1);
+      renderSpellSuggestions();
+    } else if(e.key === 'ArrowUp'){
+      e.preventDefault();
+      SPELL_SUGGESTION_INDEX = Math.max(SPELL_SUGGESTION_INDEX - 1, -1);
+      renderSpellSuggestions();
+    } else if(e.key === 'Enter'){
+      e.preventDefault();
+      if(SPELL_SUGGESTION_INDEX >= 0 && suggestions[SPELL_SUGGESTION_INDEX]){
+        applySpellSearch(suggestions[SPELL_SUGGESTION_INDEX].name);
+      } else {
+        box.classList.remove('open');
+      }
+    } else if(e.key === 'Escape'){
+      box.classList.remove('open');
+      SPELL_SUGGESTION_INDEX = -1;
+    }
+  };
+  input.onfocus = ()=>{ if(input.value.trim()) renderSpellSuggestions(); };
+  input.onblur = ()=>{ setTimeout(()=>box.classList.remove('open'), 120); };
+  clearBtn.onclick = ()=>{ applySpellSearch(''); input.focus(); };
+}
 function renderSpellLevelFilter(){
   const box = document.getElementById('spellLevelFilter');
   const present = new Set(CHAR.spellsPrepared.map(s=>s.level));
@@ -2052,8 +2173,23 @@ function renderSpellsPrepared(){
   if(SPELL_LEVEL_FILTER!=='all'){
     order = order.filter(i=>CHAR.spellsPrepared[i].level===SPELL_LEVEL_FILTER);
   }
+  if(SPELL_SEARCH_QUERY){
+    const q = SPELL_SEARCH_QUERY.toLowerCase();
+    order = order.filter(i=>{
+      const s = CHAR.spellsPrepared[i];
+      if((s.name||'').toLowerCase().includes(q)) return true;
+      if((s.school||'').toLowerCase().includes(q)) return true;
+      const m = findSpellMatch(s.name);
+      if(m && (m.desc||'').toLowerCase().includes(q)) return true;
+      if(s.manual && (s.manual.desc||'').toLowerCase().includes(q)) return true;
+      return false;
+    });
+  }
   if(order.length===0){
-    body.innerHTML = '<tr><td colspan="6" class="helptext" style="padding:14px;">No spells at this level yet.</td></tr>';
+    const msg = SPELL_SEARCH_QUERY
+      ? `No spells match "${escapeHtml(SPELL_SEARCH_QUERY)}".`
+      : 'No spells at this level yet.';
+    body.innerHTML = `<tr><td colspan="6" class="helptext" style="padding:14px;">${msg}</td></tr>`;
   }
   order.forEach(i=>{
     const s = CHAR.spellsPrepared[i];
@@ -2157,6 +2293,7 @@ function renderSpellsPrepared(){
 }
 document.getElementById('addSpellRowBtn').onclick = ()=>{
   SPELL_LEVEL_FILTER = 'all';
+  applySpellSearch('');
   CHAR.spellsPrepared.push({level:0,name:'New Spell',school:'',prepared:false,used:false});
   renderSpellsPrepared(); queueSave();
 };
@@ -2723,6 +2860,7 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
 (async function init(){
   await detectStorageBackend();
   await loadGhConfigFromStorage();
+  initSpellSearch();
   const ghCfg = getGhConfig();
   if(ghCfg) updateSyncPill('synced', `syncing to ${ghCfg.owner}/${ghCfg.repo}`);
   else updateSyncPill('unconnected');
