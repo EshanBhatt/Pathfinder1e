@@ -188,6 +188,14 @@ textarea.desc-match{
   background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);
 }
 .sna-creature.alt{border-style:dashed;opacity:.75;}
+.sna-creature{cursor:pointer;transition:all .12s;}
+.sna-creature:hover{border-color:var(--gold);color:var(--text);}
+.sna-creature.has-stats{border-color:var(--sage-dim);color:var(--sage);}
+.sna-creature.has-stats b{font-size:8px;opacity:.7;}
+.sna-statpanel{
+  margin-top:8px;padding:10px 12px;background:var(--surface);
+  border:1px solid var(--gold);border-radius:8px;
+}
 .manual-statblock input[type="text"]{
   display:inline-block;width:calc(100% - 90px);padding:3px 6px;font-size:11px;
   background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--text);
@@ -817,6 +825,117 @@ const CREATURE_TYPES = [
   {name:'Undead',hd:'d8',bab:'3/4 (Medium)',saves:'Will',skillRanks:'4 + Int/HD (many mindless)',classSkills:'Climb, Disguise, Fly, Intimidate, Knowledge (arcana/religion), Perception, Sense Motive, Spellcraft, Stealth',traits:'No Con score (uses Cha instead for HP/Fort/etc). Darkvision 60 ft. Immune to mind-affecting effects, bleed, death effects, disease, paralysis, poison, sleep, stunning, nonlethal damage, ability drain/energy drain, most Fortitude-save effects, and physical ability damage. Destroyed at 0 hp. Doesn\'t breathe, eat, or sleep.'},
   {name:'Vermin',hd:'d8',bab:'3/4 (Medium)',saves:'Fort',skillRanks:'2 + Int/HD (most mindless)',classSkills:'None',traits:'Most are mindless (no Int score) and immune to mind-affecting effects. Darkvision 60 ft. Proficient with natural weapons only, no armor. Breathes, eats, sleeps.'},
 ];
+const SNA_URLS = {
+  'Dire rat':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/rat/dire-rat',
+  'Dog':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/dog/dog',
+  'Dolphin':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/cetacean/dolphin/dolphin',
+  'Eagle':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/eagle',
+  'Giant centipede':'https://www.d20pfsrd.com/bestiary/monster-listings/vermin/centipede/centipede-giant',
+  'Fire beetle':'https://www.d20pfsrd.com/bestiary/monster-listings/vermin/beetle/beetle-fire',
+  'Mite (gremlin)':'https://www.d20pfsrd.com/bestiary/monster-listings/fey/mite',
+  'Poisonous frog':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/frog/frog-poisonous',
+  'Pony (horse)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/horse/pony',
+  'Stirge':'https://www.d20pfsrd.com/bestiary/monster-listings/magical-beasts/stirge',
+  'Viper (snake)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/snake/snake-viper',
+  'Ant, giant (worker)':'https://www.d20pfsrd.com/bestiary/monster-listings/vermin/ant/ant-giant-worker',
+  'Elemental (Small) [Elemental]':'https://www.d20pfsrd.com/bestiary/monster-listings/outsiders/elemental',
+  'Giant frog':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/frog/frog-giant',
+  'Giant spider':'https://www.d20pfsrd.com/bestiary/monster-listings/vermin/spider/giant-spider',
+  'Goblin dog':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/dog/goblin-dog',
+  'Horse':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/horse',
+  'Hyena':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/hyena',
+  'Octopus':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/octopus/summoned-creature-octopus',
+  'Squid':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/squid/summoned-creature-squid',
+  'Wolf':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/canines/wolf/',
+  'Ant, giant (soldier)':'https://www.d20pfsrd.com/bestiary/monster-listings/vermin/ant/ant-giant-soldier/summoned-creature-soldier-ant',
+  'Ape':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/primates/primate-gorilla/summoned-creature-ape',
+  'Aurochs (herd animal)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/herd-animals/aurochs/summoned-creature-aurochs',
+  'Boar':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/boar/boar/summoned-creature-boar',
+  'Cheetah':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/cat-great/cheetah/summoned-creature-cheetah',
+  'Constrictor snake':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/snake/snake-constrictor/summoned-creature-constrictor-snake',
+  'Crocodile':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/crocodilians/crocodile/crocodile',
+  'Dire bat':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/bat/bat-dire/summoned-creature-dire-bat',
+  'Electric eel':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/eel/eel-electric/summoned-creature-electric-eel',
+  'Giant crab':'https://www.d20pfsrd.com/bestiary/monster-listings/vermin/crab/giant-crab',
+  'Leopard (cat)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/cat-great/leopard',
+  'Monitor lizard':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/lizard/monitor-lizard',
+  'Shark':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/shark/shark',
+  'Wolverine':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/wolverine',
+  'Ant, giant (drone)':'https://www.d20pfsrd.com/bestiary/monster-listings/vermin/ant/ant-giant-drone/summoned-creature-giant-ant-drone',
+  'Bison (herd animal)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/herd-animals/bison',
+  'Deinonychus (dinosaur)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/dinosaur/deinonychus',
+  'Dire ape':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/primates/primate-ape-dire',
+  'Dire boar':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/boar/dire-boar',
+  'Dire wolf':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/canines/wolf/dire-wolf',
+  'Elemental (Medium) [Elemental]':'https://www.d20pfsrd.com/bestiary/monster-listings/outsiders/elemental',
+  'Giant scorpion':'https://www.d20pfsrd.com/bestiary/monster-listings/vermin/scorpion/scorpion-giant',
+  'Giant stag beetle':'https://www.d20pfsrd.com/bestiary/monster-listings/vermin/beetle/beetle-stag',
+  'Giant wasp':'https://www.d20pfsrd.com/bestiary/monster-listings/vermin/bees-and-wasps/wasp/wasp-giant',
+  'Griffon':'https://www.d20pfsrd.com/bestiary/monster-listings/magical-beasts/griffon',
+  'Grizzly bear':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/bear/brown-grizzly-bear',
+  'Lion':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/cat-great/lion',
+  'Mephit (any) [Elemental]':'https://www.d20pfsrd.com/bestiary/monster-listings/outsiders/mephit',
+  'Owlbear':'https://www.d20pfsrd.com/bestiary/monster-listings/magical-beasts/owlbear',
+  'Pteranodon (dinosaur)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/pterosaur/pterosaur-pteranodon',
+  'Rhinoceros':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/rhinoceros',
+  'Satyr':'https://www.d20pfsrd.com/bestiary/monster-listings/fey/satyr',
+  'Tiger':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/cat-great/tiger',
+  'Ankylosaurus (dinosaur)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/dinosaur/ankylosaurus',
+  'Cyclops':'https://www.d20pfsrd.com/bestiary/monster-listings/humanoids/giants/cyclops',
+  'Dire lion':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/cat-great/lion/dire-lion',
+  'Elemental (Large) [Elemental]':'https://www.d20pfsrd.com/bestiary/monster-listings/outsiders/elemental',
+  'Ettin':'https://www.d20pfsrd.com/bestiary/monster-listings/humanoids/giants/ettin',
+  'Giant moray eel':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/eel/eel-moray-giant',
+  'Girallon':'https://www.d20pfsrd.com/bestiary/monster-listings/magical-beasts/girallon',
+  'Orca (dolphin)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/cetacean/dolphin/orca',
+  'Manticore':'https://www.d20pfsrd.com/bestiary/monster-listings/magical-beasts/manticore',
+  'Woolly rhinoceros':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/rhinoceros/wooly-rhinoceros',
+  'Bulette':'https://www.d20pfsrd.com/bestiary/monster-listings/magical-beasts/bulette',
+  'Dire bear':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/bear/dire-bear',
+  'Dire tiger':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/cat-great/tiger/dire-tiger',
+  'Elasmosaurus (dinosaur)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/dinosaur/elasmosaurus',
+  'Elemental (Huge) [Elemental]':'https://www.d20pfsrd.com/bestiary/monster-listings/outsiders/elemental',
+  'Elephant':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/elephant/elephant',
+  'Giant octopus':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/octopus/octopus-giant',
+  'Hill giant':'https://www.d20pfsrd.com/bestiary/monster-listings/humanoids/giants/giant-true/giant-hill',
+  'Stegosaurus (dinosaur)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/dinosaur/stegosaurus',
+  'Stone giant [Earth]':'https://www.d20pfsrd.com/bestiary/monster-listings/humanoids/giants/giant-true/giant-stone',
+  'Triceratops (dinosaur)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/dinosaur/triceratops',
+  'Brachiosaurus (dinosaur)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/dinosaur/brachiosaurus',
+  'Dire crocodile':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/crocodilians/crocodile/dire-crocodile',
+  'Dire shark':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/shark/dire-shark',
+  'Elemental (Greater) [Elemental]':'https://www.d20pfsrd.com/bestiary/monster-listings/outsiders/elemental',
+  'Fire giant [Fire]':'https://www.d20pfsrd.com/bestiary/monster-listings/humanoids/giants/giant-true/giant-fire',
+  'Frost giant [Cold]':'https://www.d20pfsrd.com/bestiary/monster-listings/humanoids/giants/giant-true/giant-frost',
+  'Giant squid':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/squid/giant-squid',
+  'Mastodon (elephant)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/elephant/elephant-mastodon',
+  'Roc':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/roc',
+  'Tyrannosaurus (dinosaur)':'https://www.d20pfsrd.com/bestiary/monster-listings/animals/dinosaur/tyrannosaurus',
+  'Cloud giant [Air]':'https://www.d20pfsrd.com/bestiary/monster-listings/humanoids/giants/giant-true/giant-cloud',
+  'Elemental (Elder) [Elemental]':'https://www.d20pfsrd.com/bestiary/monster-listings/outsiders/elemental',
+  'Purple worm':'https://www.d20pfsrd.com/bestiary/monster-listings/magical-beasts/purple-worm',
+  'Pixie (with irresistible dance and sleep arrows)':'https://www.d20pfsrd.com/bestiary/monster-listings/fey/pixie',
+  'Storm giant':'https://www.d20pfsrd.com/bestiary/monster-listings/humanoids/giants/giant-true/giant-storm',
+};
+const SNA_STATS = {
+  'Wolf':{size:'Medium Animal',cr:'1',ac:'14, touch 12, flat-footed 12 (+2 Dex, +2 natural)',hp:'13 (2d8+4)',speed:'50 ft.',saves:'Fort +5, Ref +5, Will +1',melee:'Bite +2 (1d6+1 plus trip)',stats:'Str 13, Dex 15, Con 15, Int 2, Wis 12, Cha 6',special:'Low-light vision, scent. Trip on bite. Perception +8, Stealth +6, Survival +1 (+5 scent tracking).'},
+  'Dire wolf':{size:'Large Animal',cr:'3',ac:'14, touch 11, flat-footed 12 (+2 Dex, +3 natural, -1 size)',hp:'37 (5d8+15)',speed:'50 ft.',saves:'Fort +7, Ref +6, Will +2',melee:'Bite +7 (1d8+6 plus trip)',stats:'Str 19, Dex 15, Con 17, Int 2, Wis 12, Cha 10',special:'Low-light vision, scent. Trip on bite. Feats: Run, Skill Focus (Perception), Weapon Focus (bite).'},
+  'Grizzly bear':{size:'Large Animal',cr:'4',ac:'16, touch 10, flat-footed 15 (+1 Dex, +6 natural, -1 size)',hp:'42 (5d8+20)',speed:'40 ft.',saves:'Fort +8, Ref +5, Will +2',melee:'2 claws +7 (1d6+5 plus grab), bite +7 (1d6+5)',stats:'Str 21, Dex 13, Con 19, Int 2, Wis 12, Cha 6',special:'Low-light vision, scent. Grab on claws. Feats: Endurance, Run, Skill Focus (Survival).'},
+  'Eagle':{size:'Small Animal',cr:'1/2',ac:'14, touch 13, flat-footed 12 (+2 Dex, +1 natural, +1 size)',hp:'5 (1d8+1)',speed:'10 ft., fly 80 ft. (average)',saves:'Fort +3, Ref +4, Will +2',melee:'2 talons +3 (1d4), bite +3 (1d4)',stats:'Str 10, Dex 15, Con 12, Int 2, Wis 15, Cha 7',special:'Low-light vision. Weapon Finesse. +8 racial Perception.'},
+  'Tiger':{size:'Large Animal',cr:'4',ac:'14, touch 11, flat-footed 12 (+2 Dex, +3 natural, -1 size)',hp:'45 (6d8+18)',speed:'40 ft.',saves:'Fort +8, Ref +7, Will +3',melee:'2 claws +9 (1d8+6 plus grab), bite +9 (2d6+6 plus grab)',stats:'Str 23, Dex 15, Con 17, Int 2, Wis 12, Cha 6',special:'Low-light vision, scent. Pounce, grab, rake (2 claws +9, 1d8+6). Strong full-attack option on a charge.'},
+  'Lion':{size:'Large Animal',cr:'3',ac:'14, touch 12, flat-footed 11 (+3 Dex, +2 natural, -1 size)',hp:'32 (5d8+10)',speed:'40 ft.',saves:'Fort +6, Ref +7, Will +2',melee:'2 claws +6 (1d4+4), bite +6 (1d6+4 plus grab)',stats:'Str 19, Dex 17, Con 15, Int 2, Wis 12, Cha 6',special:'Low-light vision, scent. Pounce, grab, rake (2 claws +6, 1d4+4).'},
+  'Dire lion':{size:'Large Animal',cr:'5',ac:'17, touch 12, flat-footed 14 (+3 Dex, +5 natural, -1 size)',hp:'66 (7d8+35)',speed:'40 ft.',saves:'Fort +10, Ref +8, Will +4',melee:'2 claws +11 (1d6+6), bite +11 (1d8+6 plus grab)',stats:'Str 23, Dex 17, Con 21, Int 2, Wis 12, Cha 10',special:'Low-light vision, scent. Pounce, grab, rake (2 claws +11, 1d6+6). Roar ability in some versions — confirm with GM.'},
+  'Orca (dolphin)':{size:'Huge Animal',cr:'5',ac:'16, touch 10, flat-footed 14 (+2 Dex, +6 natural, -2 size)',hp:'62 (9d8+22)',speed:'swim 80 ft.',saves:'Fort +10, Ref +10, Will +6',melee:'Bite +12 (2d6+9)',stats:'Str 27, Dex 15, Con 21, Int 2, Wis 13, Cha 6',special:'Low-light vision, blindsight 120 ft., hold breath. Aquatic only — can\'t operate on land.'},
+  'Rhinoceros':{size:'Large Animal',cr:'4',ac:'16, touch 10, flat-footed 15 (+1 Dex, +6 natural, -1 size)',hp:'45 (6d8+18)',speed:'40 ft.',saves:'Fort +8, Ref +6, Will +3',melee:'Gore +9 (2d6+9)',stats:'Str 22, Dex 13, Con 17, Int 2, Wis 13, Cha 4',special:'Scent. Powerful charge (gore, 4d6+13) — excellent opening attack.'},
+  'Griffon':{size:'Large Magical Beast',cr:'4',ac:'17, touch 11, flat-footed 15 (+2 Dex, +6 natural, -1 size)',hp:'42 (5d10+15)',speed:'30 ft., fly 80 ft. (average)',saves:'Fort +7, Ref +6, Will +3',melee:'Bite +8 (1d6+4), 2 claws +8 (1d4+4)',stats:'Str 18, Dex 15, Con 17, Int 5, Wis 13, Cha 8',special:'Low-light vision, darkvision 60 ft., scent. Pounce, rake (2 claws +8, 1d6+4). Flying summon — useful vs airborne foes.'},
+  'Dire bear':{size:'Large Animal',cr:'6',ac:'18, touch 10, flat-footed 17 (+1 Dex, +8 natural, -1 size)',hp:'87 (9d8+45)',speed:'40 ft.',saves:'Fort +11, Ref +7, Will +4',melee:'2 claws +14 (1d8+9 plus grab), bite +13 (2d6+9)',stats:'Str 29, Dex 13, Con 21, Int 2, Wis 12, Cha 10',special:'Low-light vision, scent. Grab on claws. Heaviest-hitting SNA VI land option.'},
+  'Dire tiger':{size:'Large Animal',cr:'8',ac:'22, touch 12, flat-footed 19 (+3 Dex, +10 natural, -1 size)',hp:'120 (16d8+48)',speed:'40 ft.',saves:'Fort +13, Ref +13, Will +7',melee:'2 claws +20 (2d4+8 plus grab), bite +20 (2d6+8 plus grab)',stats:'Str 27, Dex 17, Con 17, Int 2, Wis 12, Cha 10',special:'Low-light vision, scent. Pounce, grab, rake (2 claws +20, 2d4+8). Devastating full attack on a charge.'},
+  'Roc':{size:'Gargantuan Animal',cr:'9',ac:'21, touch 7, flat-footed 20 (+1 Dex, +14 natural, -4 size)',hp:'142 (15d8+75)',speed:'20 ft., fly 80 ft. (average)',saves:'Fort +14, Ref +12, Will +7',melee:'2 talons +18 (2d6+10 plus grab), bite +18 (2d8+10)',stats:'Str 30, Dex 13, Con 21, Int 2, Wis 13, Cha 11',special:'Low-light vision. Grab on talons, can carry off grabbed prey. Best flying summon available.'},
+  'Elephant':{size:'Huge Animal',cr:'7',ac:'17, touch 9, flat-footed 16 (+1 Dex, +10 natural, -2 size)',hp:'105 (11d8+55)',speed:'40 ft.',saves:'Fort +14, Ref +8, Will +5',melee:'Gore +17 (2d8+12), slam +16 (2d6+12), 2 stamps +14 (1d8+6)',stats:'Str 34, Dex 12, Con 21, Int 2, Wis 13, Cha 7',special:'Scent. Trample (2d8+18). Same creature type as Fanta.'},
+  'Mastodon (elephant)':{size:'Huge Animal',cr:'9',ac:'22, touch 9, flat-footed 21 (+1 Dex, +13 natural, -2 size)',hp:'149 (13d8+91)',speed:'40 ft.',saves:'Fort +17, Ref +9, Will +6',melee:'2 gores +19 (2d8+13)',stats:'Str 36, Dex 12, Con 25, Int 2, Wis 13, Cha 7',special:'Scent. Trample (2d8+19). Heaviest SNA VII option.'},
+  'Triceratops (dinosaur)':{size:'Huge Animal',cr:'8',ac:'22, touch 8, flat-footed 22 (+14 natural, -2 size)',hp:'126 (11d8+77)',speed:'30 ft.',saves:'Fort +14, Ref +7, Will +5',melee:'Gore +17 (2d8+15)',stats:'Str 30, Dex 10, Con 25, Int 1, Wis 13, Cha 7',special:'Scent. Powerful charge (gore, 4d8+22), trample (2d8+15).'},
+  'Giant octopus':{size:'Large Animal',cr:'8',ac:'21, touch 12, flat-footed 18 (+3 Dex, +9 natural, -1 size)',hp:'94 (9d8+54)',speed:'20 ft., swim 30 ft., jet 200 ft.',saves:'Fort +12, Ref +9, Will +5',melee:'8 tentacles +11 (1d4+5 plus grab), bite +11 (1d8+5 plus poison)',stats:'Str 20, Dex 17, Con 22, Int 2, Wis 13, Cha 3',special:'Low-light vision. Constrict, grab, ink cloud, jet. Many tentacle attacks make it a strong grappler.'},
+};
 const SUMMON_NATURE = [
   {level:1,spell:'SNA I (druid 1)',creatures:'Dire rat|Dog|Dolphin|Eagle|Giant centipede|Fire beetle|Mite (gremlin)|Poisonous frog|Pony (horse)|Stirge|Viper (snake)',alts:''},
   {level:2,spell:'SNA II (druid 2)',creatures:'Ant, giant (worker)|Elemental (Small) [Elemental]|Giant frog|Giant spider|Goblin dog|Horse|Hyena|Octopus|Squid|Wolf',alts:'Axe beak (AP75)|Celestial elk (AP32)|Dire badger (AP75)|Giant porcupine (AP75)|Venomous snake (AP42)'},
@@ -2763,8 +2882,14 @@ function renderReference(){
       const avail = maxLvl>=g.level;
       const div = document.createElement('div');
       div.className='result-item';
-      const creatureList = g.creatures.split('|').map(c=>`<span class="sna-creature">${escapeHtml(c)}</span>`).join('');
-      const altList = g.alts ? g.alts.split('|').map(c=>`<span class="sna-creature alt">${escapeHtml(c)}</span>`).join('') : '';
+      const mkChip = (c, isAlt)=>{
+        const clean = c.replace(/\s*\(AP\d+\)\s*$/,'').trim();
+        const hasStats = !!SNA_STATS[clean];
+        const url = SNA_URLS[clean] || SNA_URLS[c.trim()];
+        return `<span class="sna-creature${isAlt?' alt':''}${hasStats?' has-stats':''}" data-creature="${escapeHtml(clean)}" ${url?`data-url="${escapeHtml(url)}"`:''}>${escapeHtml(c)}${hasStats?' <b>&#9662;</b>':''}</span>`;
+      };
+      const creatureList = g.creatures.split('|').map(c=>mkChip(c,false)).join('');
+      const altList = g.alts ? g.alts.split('|').map(c=>mkChip(c,true)).join('') : '';
       div.innerHTML = `<div class="rname">${escapeHtml(g.spell)}
           <span class="tag" style="${avail?'border-color:var(--sage);color:var(--sage);':'opacity:.5;'}">${avail?'Available':'Not yet'}</span></div>
         <div class="rmeta">Summons one ${g.level}-level creature, 1d3 of the next level down, or 1d4+1 lower-level creatures of the same kind.</div>
@@ -2772,8 +2897,38 @@ function renderReference(){
           <div class="sna-grid">${creatureList}</div>
           ${altList?`<div style="margin-top:8px;font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;">Alternative options (GM permission)</div><div class="sna-grid">${altList}</div>`:''}
         </div>`;
-      div.onclick = ()=>div.classList.toggle('open');
+      div.onclick = (e)=>{ if(e.target.closest('.sna-creature')) return; div.classList.toggle('open'); };
       box.appendChild(div);
+    });
+    box.querySelectorAll('.sna-creature').forEach(chip=>{
+      chip.onclick = (e)=>{
+        e.stopPropagation();
+        const name = chip.getAttribute('data-creature');
+        const url = chip.getAttribute('data-url');
+        const st = SNA_STATS[name];
+        let panel = chip.parentElement.nextElementSibling;
+        if(panel && panel.classList.contains('sna-statpanel')){ panel.remove(); return; }
+        chip.parentElement.parentElement.querySelectorAll('.sna-statpanel').forEach(p=>p.remove());
+        panel = document.createElement('div');
+        panel.className = 'sna-statpanel';
+        if(st){
+          panel.innerHTML = `<div class="rname" style="margin-bottom:4px;">${escapeHtml(name)} <span class="tag">${escapeHtml(st.size)} · CR ${escapeHtml(st.cr)}</span></div>
+            <div class="spell-statblock">
+              <div><b>AC</b> ${escapeHtml(st.ac)}</div>
+              <div><b>HP</b> ${escapeHtml(st.hp)}</div>
+              <div><b>Speed</b> ${escapeHtml(st.speed)}</div>
+              <div><b>Saves</b> ${escapeHtml(st.saves)}</div>
+              <div style="grid-column:span 2;"><b>Melee</b> ${escapeHtml(st.melee)}</div>
+              <div style="grid-column:span 2;"><b>Abilities</b> ${escapeHtml(st.stats)}</div>
+            </div>
+            <div class="helptext">${escapeHtml(st.special)}</div>
+            ${url?`<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="btn small" style="margin-top:8px;display:inline-block;text-decoration:none;">Full entry on d20pfsrd &#8599;</a>`:''}`;
+        } else {
+          panel.innerHTML = `<div class="helptext" style="margin-top:0;">No local stat block for <b>${escapeHtml(name)}</b> yet.</div>
+            ${url?`<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="btn small" style="margin-top:6px;display:inline-block;text-decoration:none;">Open full stats on d20pfsrd &#8599;</a>`:'<div class="helptext">No link available.</div>'}`;
+        }
+        chip.parentElement.after(panel);
+      };
     });
     if(matches.length===0) box.innerHTML = '<div class="helptext" style="padding:14px;">No matches.</div>';
   } else {
