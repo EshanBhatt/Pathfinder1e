@@ -182,6 +182,12 @@ textarea.desc-match{
   padding:9px 11px;font-size:11.5px;color:var(--text-dim);
 }
 .spell-statblock b{color:var(--sage);font-weight:600;margin-right:4px;}
+.sna-grid{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+.sna-creature{
+  display:inline-block;padding:3px 9px;border-radius:14px;font-size:11px;
+  background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);
+}
+.sna-creature.alt{border-style:dashed;opacity:.75;}
 .manual-statblock input[type="text"]{
   display:inline-block;width:calc(100% - 90px);padding:3px 6px;font-size:11px;
   background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--text);
@@ -648,6 +654,7 @@ textarea.desc-match{
           <option value="feats">Feats</option>
           <option value="skills">Skills</option>
           <option value="wildshape">Wild Shape</option>
+          <option value="summons">Summon Nature's Ally</option>
         </select>
         <select id="refClass" style="max-width:170px;">
           <option value="all">All Classes</option>
@@ -810,6 +817,18 @@ const CREATURE_TYPES = [
   {name:'Undead',hd:'d8',bab:'3/4 (Medium)',saves:'Will',skillRanks:'4 + Int/HD (many mindless)',classSkills:'Climb, Disguise, Fly, Intimidate, Knowledge (arcana/religion), Perception, Sense Motive, Spellcraft, Stealth',traits:'No Con score (uses Cha instead for HP/Fort/etc). Darkvision 60 ft. Immune to mind-affecting effects, bleed, death effects, disease, paralysis, poison, sleep, stunning, nonlethal damage, ability drain/energy drain, most Fortitude-save effects, and physical ability damage. Destroyed at 0 hp. Doesn\'t breathe, eat, or sleep.'},
   {name:'Vermin',hd:'d8',bab:'3/4 (Medium)',saves:'Fort',skillRanks:'2 + Int/HD (most mindless)',classSkills:'None',traits:'Most are mindless (no Int score) and immune to mind-affecting effects. Darkvision 60 ft. Proficient with natural weapons only, no armor. Breathes, eats, sleeps.'},
 ];
+const SUMMON_NATURE = [
+  {level:1,spell:'SNA I (druid 1)',creatures:'Dire rat|Dog|Dolphin|Eagle|Giant centipede|Fire beetle|Mite (gremlin)|Poisonous frog|Pony (horse)|Stirge|Viper (snake)',alts:''},
+  {level:2,spell:'SNA II (druid 2)',creatures:'Ant, giant (worker)|Elemental (Small) [Elemental]|Giant frog|Giant spider|Goblin dog|Horse|Hyena|Octopus|Squid|Wolf',alts:'Axe beak (AP75)|Celestial elk (AP32)|Dire badger (AP75)|Giant porcupine (AP75)|Venomous snake (AP42)'},
+  {level:3,spell:'SNA III (druid 3)',creatures:'Ant, giant (soldier)|Ape|Aurochs (herd animal)|Boar|Cheetah|Constrictor snake|Crocodile|Dire bat|Electric eel|Giant crab|Leopard (cat)|Monitor lizard|Shark|Wolverine',alts:'Celestial dire boar (AP32)'},
+  {level:4,spell:'SNA IV (druid 4)',creatures:'Ant, giant (drone)|Bison (herd animal)|Deinonychus (dinosaur)|Dire ape|Dire boar|Dire wolf|Elemental (Medium) [Elemental]|Giant scorpion|Giant stag beetle|Giant wasp|Griffon|Grizzly bear|Lion|Mephit (any) [Elemental]|Owlbear|Pteranodon (dinosaur)|Rhinoceros|Satyr|Tiger',alts:'Amphisbaena (AP42)|Giant chameleon lizard (AP75)|Giant skunk (AP75)|Seaweed leshy (AP75)|Giant vulture (AP75)'},
+  {level:5,spell:'SNA V (druid 5)',creatures:'Ankylosaurus (dinosaur)|Cyclops|Dire lion|Elemental (Large) [Elemental]|Ettin|Giant moray eel|Girallon|Orca (dolphin)|Manticore|Woolly rhinoceros',alts:'Emperor cobra (AP42)|Giant owl (AP75)|Giant gar (AP75)|Merrow, saltwater NE (AP55)'},
+  {level:6,spell:'SNA VI (druid 6)',creatures:'Bulette|Dire bear|Dire tiger|Elasmosaurus (dinosaur)|Elemental (Huge) [Elemental]|Elephant|Giant octopus|Hill giant|Stegosaurus (dinosaur)|Stone giant [Earth]|Triceratops (dinosaur)',alts:'Shambling mound (AP75)|Tylosaurus, dinosaur - N (AP55)'},
+  {level:7,spell:'SNA VII (druid 7)',creatures:'Brachiosaurus (dinosaur)|Dire crocodile|Dire shark|Elemental (Greater) [Elemental]|Fire giant [Fire]|Frost giant [Cold]|Giant squid|Mastodon (elephant)|Roc|Tyrannosaurus (dinosaur)',alts:'Giant anaconda (AP42)|Giant flytrap (AP75)|Giant snapping turtle (AP75)'},
+  {level:8,spell:'SNA VIII (druid 8)',creatures:'Cloud giant [Air]|Elemental (Elder) [Elemental]|Purple worm',alts:''},
+  {level:9,spell:'SNA IX (druid 9)',creatures:'Pixie (with irresistible dance and sleep arrows)|Storm giant',alts:''},
+];
+
 const WILDSHAPE_SIZE = [
   {name:'Diminutive Animal',size:'Diminutive',str:'-4',dex:'+6',con:'+0',natural:'+1',note:'Available from druid level 8 (beast shape III).'},
   {name:'Tiny Animal',size:'Tiny',str:'-2',dex:'+4',con:'+0',natural:'+1',note:'Available from druid level 6 (beast shape II).'},
@@ -2721,6 +2740,42 @@ function renderReference(){
       div.onclick = ()=>div.classList.toggle('open');
       box.appendChild(div);
     });
+  } else if(type==='summons'){
+    document.getElementById('wildshapeSizeFilter').style.display = 'none';
+    document.getElementById('activeWildShapeBanner').style.display = 'none';
+    const maxLvl = (function(){
+      let best = 0;
+      (CHAR.casters||[]).forEach(cs=>{
+        const cls = CHAR.classes.find(c=>c.name===cs.className);
+        const cl = cs.clOverride!=null ? cs.clOverride : (cls?Number(cls.level)||0:0);
+        const tbl = cs.prog==='full'?FULL_TABLE:cs.prog==='medium'?MEDIUM_TABLE:LOW_TABLE;
+        const row = tbl[cl]||[];
+        for(let L=9;L>=1;L--){ if((row[L]||0)>0){ if(L>best) best=L; break; } }
+      });
+      return best;
+    })();
+    const matches = SUMMON_NATURE.filter(g=>{
+      if(!q) return true;
+      return g.creatures.toLowerCase().includes(q) || g.alts.toLowerCase().includes(q) || String(g.level)===q;
+    });
+    items = matches;
+    matches.forEach(g=>{
+      const avail = maxLvl>=g.level;
+      const div = document.createElement('div');
+      div.className='result-item';
+      const creatureList = g.creatures.split('|').map(c=>`<span class="sna-creature">${escapeHtml(c)}</span>`).join('');
+      const altList = g.alts ? g.alts.split('|').map(c=>`<span class="sna-creature alt">${escapeHtml(c)}</span>`).join('') : '';
+      div.innerHTML = `<div class="rname">${escapeHtml(g.spell)}
+          <span class="tag" style="${avail?'border-color:var(--sage);color:var(--sage);':'opacity:.5;'}">${avail?'Available':'Not yet'}</span></div>
+        <div class="rmeta">Summons one ${g.level}-level creature, 1d3 of the next level down, or 1d4+1 lower-level creatures of the same kind.</div>
+        <div class="rdesc" style="display:block;margin-top:6px;">
+          <div class="sna-grid">${creatureList}</div>
+          ${altList?`<div style="margin-top:8px;font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;">Alternative options (GM permission)</div><div class="sna-grid">${altList}</div>`:''}
+        </div>`;
+      div.onclick = ()=>div.classList.toggle('open');
+      box.appendChild(div);
+    });
+    if(matches.length===0) box.innerHTML = '<div class="helptext" style="padding:14px;">No matches.</div>';
   } else {
     // wildshape
     document.getElementById('wildshapeSizeFilter').style.display = 'flex';
