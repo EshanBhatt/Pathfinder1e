@@ -981,8 +981,8 @@ const WILDSHAPE_SIZE = [
   {name:'Medium Animal',size:'Medium',str:'+2',dex:'+0',con:'+0',natural:'+2',note:'Available from druid level 4 (beast shape I).'},
   {name:'Large Animal',size:'Large',str:'+4',dex:'-2',con:'+0',natural:'+4',note:'Available from druid level 6 (beast shape II).'},
   {name:'Huge Animal',size:'Huge',str:'+6',dex:'-4',con:'+0',natural:'+6',note:'Available from druid level 8 (beast shape III).'},
-  {name:'Small Air Elemental',size:'Small',str:'+0',dex:'+2',con:'+0',natural:'+2',note:'ELEMENTAL FORM \u2014 available from druid level 6 (elemental body I). Also grants fly 60 ft. (perfect maneuverability), darkvision 60 ft., and the whirlwind ability. Elemental forms also grant immunity to bleed, critical hits, and sneak attacks.'},
-  {name:'Medium Air Elemental',size:'Medium',str:'+0',dex:'+4',con:'+0',natural:'+3',note:'ELEMENTAL FORM \u2014 available from druid level 8 (elemental body II). Also grants fly 60 ft. (perfect maneuverability), darkvision 60 ft., and the whirlwind ability. Elemental forms also grant immunity to bleed, critical hits, and sneak attacks.'},
+  {name:'Small Air Elemental',size:'Small',str:'+0',dex:'+2',con:'+0',natural:'+2',fly:60,note:'ELEMENTAL FORM \u2014 available from druid level 6 (elemental body I). Also grants fly 60 ft. (perfect maneuverability), darkvision 60 ft., and the whirlwind ability. Elemental forms also grant immunity to bleed, critical hits, and sneak attacks.'},
+  {name:'Medium Air Elemental',size:'Medium',str:'+0',dex:'+4',con:'+0',natural:'+3',fly:60,note:'ELEMENTAL FORM \u2014 available from druid level 8 (elemental body II). Also grants fly 60 ft. (perfect maneuverability), darkvision 60 ft., and the whirlwind ability. Elemental forms also grant immunity to bleed, critical hits, and sneak attacks.'},
 ];
 const WILDSHAPE_FORMS = [
   {name:'Wolf',size:'Medium',cr:'1',speed:'50 ft.',ac:'14, touch 12, flat-footed 12 (+2 Dex, +2 natural)',hp:'13 (2d8+4)',saves:'Fort +5, Ref +5, Will +1',attacks:'Bite +2 (1d6+1 plus trip)',abilities:'Str 13, Dex 15, Con 15, Int 2, Wis 12, Cha 6',other:'Low-light vision, scent. Skills: Perception +8, Stealth +6, Survival +1 (+5 tracking by scent).'},
@@ -1782,6 +1782,18 @@ function bindInputs(root){
       queueSave();
       recalcAll();
     };
+  });
+}
+
+/* Re-read CHAR into every bound input's visible value, WITHOUT re-rendering
+   the page or stealing focus. Used when code (not the user) changes state —
+   e.g. Wild Shape activation writing to ac.natural and abilities.*.temp. */
+function refreshBoundInputs(){
+  document.querySelectorAll('[data-bind]').forEach(el=>{
+    if(el === document.activeElement) return; // don't yank the field being typed in
+    const val = getPath(CHAR, el.getAttribute('data-bind'));
+    if(el.type==='checkbox') el.checked = !!val;
+    else el.value = (val===undefined||val===null) ? '' : val;
   });
 }
 
@@ -2768,8 +2780,19 @@ function activateWildShape(label, sizeEntry){
   CHAR.abilities.con.temp = (CHAR.abilities.con.temp||0) + con;
   CHAR.ac.natural = (CHAR.ac.natural||0) + natural;
 
-  CHAR.activeWildShape = {name: label, str, dex, con, natural};
+  // Your size category actually changes, which drives the size modifier to
+  // AC, attack rolls, CMB and CMD. Remember what you were so we can revert.
+  const prevSize = CHAR.info.size || 'medium';
+  const newSize = (sizeEntry.size||'').toLowerCase();
+  if(newSize && SIZES[newSize]) CHAR.info.size = newSize;
+
+  // Elemental forms grant a fly speed.
+  const prevFly = CHAR.speed.fly || 0;
+  if(sizeEntry.fly) CHAR.speed.fly = sizeEntry.fly;
+
+  CHAR.activeWildShape = {name: label, str, dex, con, natural, prevSize, prevFly, fly: sizeEntry.fly||0};
   queueSave();
+  refreshBoundInputs();   // push new ac.natural / temp scores into the visible fields
   recalcAll();
   toast('Wild Shape active: '+label);
 }
@@ -2781,8 +2804,11 @@ function deactivateWildShape(){
   CHAR.abilities.dex.temp = (CHAR.abilities.dex.temp||0) - ws.dex;
   CHAR.abilities.con.temp = (CHAR.abilities.con.temp||0) - ws.con;
   CHAR.ac.natural = (CHAR.ac.natural||0) - ws.natural;
+  if(ws.prevSize) CHAR.info.size = ws.prevSize;
+  if(ws.fly) CHAR.speed.fly = ws.prevFly || 0;
   CHAR.activeWildShape = null;
   queueSave();
+  refreshBoundInputs();   // revert the visible fields too
   recalcAll();
   toast('Wild Shape ended — stats reverted');
 }
@@ -2793,7 +2819,7 @@ function renderActiveWildShapeBanner(){
   box.style.display = 'block';
   const ws = CHAR.activeWildShape;
   box.innerHTML = `<div class="active-wildshape-banner">
-    <div class="awsb-text">Wild Shape active: <b>${escapeHtml(ws.name)}</b> (Str ${fmt(ws.str)}, Dex ${fmt(ws.dex)}, Con ${fmt(ws.con)}, Natural Armor ${fmt(ws.natural)})</div>
+    <div class="awsb-text">Wild Shape active: <b>${escapeHtml(ws.name)}</b> (Str ${fmt(ws.str)}, Dex ${fmt(ws.dex)}, Con ${fmt(ws.con)}, Natural Armor ${fmt(ws.natural)}${ws.prevSize && ws.prevSize!==CHAR.info.size ? ', size '+CHAR.info.size : ''}${ws.fly ? ', fly '+ws.fly+' ft.' : ''})</div>
     <button class="btn small danger" id="deactivateWildShapeBtn">Deactivate</button>
   </div>`;
   document.getElementById('deactivateWildShapeBtn').onclick = ()=>{ deactivateWildShape(); renderReference(); };
