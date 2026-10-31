@@ -244,6 +244,7 @@ textarea.desc-match{
 .level-filter-btn.all-btn{width:auto;padding:0 12px;font-family:'Inter';font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
 .level-filter-btn:hover{border-color:var(--gold);color:var(--text);}
 .level-filter-btn.active{background:linear-gradient(180deg,#d3ae6a,var(--gold));color:#211a0d;border-color:var(--gold);}
+.filter-divider{display:inline-block;width:1px;height:22px;background:var(--border);margin:0 8px;vertical-align:middle;}
 .active-wildshape-banner{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   background:linear-gradient(180deg,#2a3320,#232a1c);border:1px solid var(--sage-dim);border-radius:8px;
@@ -2270,6 +2271,7 @@ function findSpellMatch(name){
 }
 
 let SPELL_LEVEL_FILTER = 'all';
+let SPELL_PREP_FILTER = 'all';   // 'all' | 'yes' | 'no' | 'unused'
 let SPELL_SEARCH_QUERY = '';
 let SPELL_SUGGESTION_INDEX = -1;
 
@@ -2375,11 +2377,29 @@ function renderSpellLevelFilter(){
   for(let L=0; L<=9; L++){
     html += `<button class="level-filter-btn ${SPELL_LEVEL_FILTER===L?'active':''}" data-lvl="${L}" title="Level ${L}${present.has(L)?'':' (none prepared)'}" style="${present.has(L)?'':'opacity:.35;'}">${L}</button>`;
   }
+  const nPrep = CHAR.spellsPrepared.filter(s=>s.prepared).length;
+  const nReady = CHAR.spellsPrepared.filter(s=>s.prepared && !s.used).length;
+  html += `<span class="filter-divider"></span>`;
+  const prepBtns = [
+    ['all','All',       'Show every spell on the list'],
+    ['yes','Prepared',  nPrep+' prepared'],
+    ['unused','Ready',  nReady+' prepared and not yet cast'],
+    ['no','Unprepared', (CHAR.spellsPrepared.length-nPrep)+' not prepared']
+  ];
+  prepBtns.forEach(([v,label,tip])=>{
+    html += `<button class="level-filter-btn all-btn ${SPELL_PREP_FILTER===v?'active':''}" data-prep="${v}" title="${tip}">${label}</button>`;
+  });
   box.innerHTML = html;
   box.querySelectorAll('[data-lvl]').forEach(el=>{
     el.onclick = ()=>{
       const v = el.getAttribute('data-lvl');
       SPELL_LEVEL_FILTER = v==='all' ? 'all' : parseInt(v);
+      renderSpellsPrepared();
+    };
+  });
+  box.querySelectorAll('[data-prep]').forEach(el=>{
+    el.onclick = ()=>{
+      SPELL_PREP_FILTER = el.getAttribute('data-prep');
       renderSpellsPrepared();
     };
   });
@@ -2420,6 +2440,15 @@ function renderSpellsPrepared(){
   if(SPELL_LEVEL_FILTER!=='all'){
     order = order.filter(i=>CHAR.spellsPrepared[i].level===SPELL_LEVEL_FILTER);
   }
+  if(SPELL_PREP_FILTER!=='all'){
+    order = order.filter(i=>{
+      const s = CHAR.spellsPrepared[i];
+      if(SPELL_PREP_FILTER==='yes')    return !!s.prepared;
+      if(SPELL_PREP_FILTER==='no')     return !s.prepared;
+      if(SPELL_PREP_FILTER==='unused') return !!s.prepared && !s.used;
+      return true;
+    });
+  }
   if(SPELL_SEARCH_QUERY){
     const q = SPELL_SEARCH_QUERY.toLowerCase();
     order = order.filter(i=>{
@@ -2433,9 +2462,12 @@ function renderSpellsPrepared(){
     });
   }
   if(order.length===0){
+    const prepLabel = {yes:'prepared',no:'unprepared',unused:'prepared and uncast'}[SPELL_PREP_FILTER];
     const msg = SPELL_SEARCH_QUERY
       ? `No spells match "${escapeHtml(SPELL_SEARCH_QUERY)}".`
-      : 'No spells at this level yet.';
+      : prepLabel
+        ? `No ${prepLabel} spells${SPELL_LEVEL_FILTER==='all'?'':' at level '+SPELL_LEVEL_FILTER}.`
+        : 'No spells at this level yet.';
     body.innerHTML = `<tr><td colspan="6" class="helptext" style="padding:14px;">${msg}</td></tr>`;
   }
   order.forEach(i=>{
@@ -2540,6 +2572,7 @@ function renderSpellsPrepared(){
 }
 document.getElementById('addSpellRowBtn').onclick = ()=>{
   SPELL_LEVEL_FILTER = 'all';
+  SPELL_PREP_FILTER = 'all';
   applySpellSearch('');
   CHAR.spellsPrepared.push({level:0,name:'New Spell',school:'',prepared:false,used:false});
   renderSpellsPrepared(); queueSave();
