@@ -244,6 +244,13 @@ textarea.desc-match{
 .level-filter-btn.all-btn{width:auto;padding:0 12px;font-family:'Inter';font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
 .level-filter-btn:hover{border-color:var(--gold);color:var(--text);}
 .level-filter-btn.active{background:linear-gradient(180deg,#d3ae6a,var(--gold));color:#211a0d;border-color:var(--gold);}
+.ref-link-row{display:flex;align-items:center;gap:6px;margin-top:8px;}
+.ref-link-row input{flex:1;min-width:0;}
+.ref-link-btn{white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
+.gear-link-cell{display:flex;align-items:center;gap:4px;}
+.gear-link-cell input{flex:1;min-width:0;}
+.gear-link-go{text-decoration:none;flex:0 0 auto;opacity:.85;}
+.gear-link-go:hover{opacity:1;}
 .filter-divider{display:inline-block;width:1px;height:22px;background:var(--border);margin:0 8px;vertical-align:middle;}
 .active-wildshape-banner{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -655,7 +662,7 @@ textarea.desc-match{
     <div class="card">
       <h3>Equipment</h3>
       <table>
-        <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Wt (ea)</th><th class="num">Total Wt</th><th style="min-width:120px;">Notes</th><th></th></tr></thead>
+        <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Wt (ea)</th><th class="num">Total Wt</th><th style="min-width:120px;">Notes</th><th style="min-width:150px;">Link</th><th></th></tr></thead>
         <tbody id="gearBody"></tbody>
       </table>
       <button class="btn small" id="addGearBtn">+ Add Item</button>
@@ -2497,6 +2504,11 @@ function renderSpellsPrepared(){
           <div><b>Spell Resistance</b> ${escapeHtml(match.sr)}</div>
         </div>
         <div class="helptext">${escapeHtml(match.desc)}</div>
+        <div class="ref-link-row">
+          <label style="margin:0;white-space:nowrap;">Reference link</label>
+          <input type="text" data-i="${i}" data-f="link" value="${escapeHtml(s.link||'')}" placeholder="paste a d20pfsrd URL">
+          ${refLinkMarkup(s.link, s.name, 'Find on d20pfsrd')}
+        </div>
       </td>`;
       body.appendChild(dtr);
     } else if(s.name && s.name.trim() && s.name.trim()!=='New Spell'){
@@ -2517,6 +2529,11 @@ function renderSpellsPrepared(){
         </div>
         <label style="margin-bottom:4px;">Description</label>
         <textarea data-i="${i}" data-mf="desc" class="autogrow desc-match" style="min-height:60px;overflow:hidden;resize:none;" placeholder="What the spell does…">${escapeHtml(mf.desc)}</textarea>
+        <div class="ref-link-row">
+          <label style="margin:0;white-space:nowrap;">Reference link</label>
+          <input type="text" data-i="${i}" data-f="link" value="${escapeHtml(s.link||'')}" placeholder="paste a d20pfsrd URL">
+          ${refLinkMarkup(s.link, s.name, 'Find on d20pfsrd')}
+        </div>
       </td>`;
       body.appendChild(ntr);
     }
@@ -2539,6 +2556,9 @@ function renderSpellsPrepared(){
       el.onblur = ()=>{ renderSpellsPrepared(); };
     }
     if(el.getAttribute('data-f')==='level'){
+      el.onblur = ()=>{ renderSpellsPrepared(); };
+    }
+    if(el.getAttribute('data-f')==='link'){
       el.onblur = ()=>{ renderSpellsPrepared(); };
     }
   });
@@ -2578,6 +2598,31 @@ document.getElementById('addSpellRowBtn').onclick = ()=>{
   renderSpellsPrepared(); queueSave();
 };
 
+/* A reference link the user pastes. Accepts a bare domain ("d20pfsrd.com/...")
+   and makes it a real URL; refuses anything that isn't http(s) so a pasted
+   "javascript:" string can never become a clickable link. */
+function normalizeRefUrl(raw){
+  const v = (raw||'').trim();
+  if(!v) return '';
+  const withProto = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(v) ? v : 'https://'+v;
+  try{
+    const u = new URL(withProto);
+    if(u.protocol!=='http:' && u.protocol!=='https:') return '';
+    return u.href;
+  }catch(e){ return ''; }
+}
+/* No link saved yet? Send them to d20pfsrd's own search for the name. */
+function d20pfsrdSearchUrl(name){
+  return 'https://www.d20pfsrd.com/?s=' + encodeURIComponent((name||'').trim());
+}
+function refLinkMarkup(link, name, label){
+  const href = normalizeRefUrl(link);
+  if(href) return `<a class="btn small ref-link-btn" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">Open ↗</a>`;
+  const n = (name||'').trim();
+  if(!n) return '';
+  return `<a class="btn small ref-link-btn" href="${escapeHtml(d20pfsrdSearchUrl(n))}" target="_blank" rel="noopener noreferrer" title="Search d20pfsrd for ${escapeHtml(n)}">${label} ↗</a>`;
+}
+
 function renderGear(){
   const body = document.getElementById('gearBody');
   body.innerHTML='';
@@ -2589,6 +2634,10 @@ function renderGear(){
       <td class="num"><input type="number" value="${g.weight}" data-i="${i}" data-f="weight" step="0.1"></td>
       <td class="num mini-total" id="gear-total-${i}">0</td>
       <td><input type="text" value="${escapeHtml(g.notes||'')}" data-i="${i}" data-f="notes"></td>
+      <td><div class="gear-link-cell">
+        <input type="text" value="${escapeHtml(g.link||'')}" data-i="${i}" data-f="link" placeholder="paste a d20pfsrd URL">
+        ${refLinkMarkup(g.link, g.name, 'Find')}
+      </div></td>
       <td><button class="iconbtn" data-del="${i}">✕</button></td>
     `;
     body.appendChild(tr);
@@ -2599,13 +2648,16 @@ function renderGear(){
       let v = (f==='qty'||f==='weight') ? (parseFloat(el.value)||0) : el.value;
       CHAR.gear[i][f]=v; queueSave(); recalcAll();
     };
+    if(el.getAttribute('data-f')==='link' || el.getAttribute('data-f')==='name'){
+      el.onblur = ()=>{ renderGear(); };
+    }
   });
   body.querySelectorAll('[data-del]').forEach(el=>{
     el.onclick=()=>{ CHAR.gear.splice(+el.getAttribute('data-del'),1); renderGear(); queueSave(); recalcAll(); };
   });
 }
 document.getElementById('addGearBtn').onclick = ()=>{
-  CHAR.gear.push({name:'New Item',qty:1,weight:0,notes:''});
+  CHAR.gear.push({name:'New Item',qty:1,weight:0,notes:'',link:''});
   renderGear(); queueSave(); recalcAll();
 };
 
